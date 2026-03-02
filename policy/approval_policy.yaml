@@ -1,0 +1,42 @@
+tolerance:
+  price_variance_pct: 2.0
+  quantity_variance_pct: 1.0
+
+thresholds:
+  auto_approve_below: 500
+  senior_approval_above: 10000
+
+compliance:
+  require_po_for_invoices_above: 1000
+  tax_rate_validation: true
+
+vendor:
+  vendor_match_min_confidence: 0.85
+
+duplicate:
+  lookback_days: 90
+  match_keys:
+    - vendor_id
+    - invoice_number
+    - invoice_date
+    - total_amount
+
+currency:
+  require_fx_rate_for_cross_currency: true
+  fx_rate_max_age_days: 1
+  amount_variance_pct_after_fx: 0.5
+
+risk:
+  bank_change_high_value_threshold: 5000
+  near_approval_limit_pct: 98
+
+ocr:
+  key_fields_min_confidence: 0.85
+  line_items_min_confidence: 0.8
+
+routing:
+  approval_roles:
+    auto_approve: ap_bot
+    standard_approval: ap_manager
+    senior_approval: finance_controller
+  risk_escalation_role: risk_officer
