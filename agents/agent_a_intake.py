@@ -5,14 +5,22 @@ import shutil
 import uuid
 import re
 
+
 class AgentA_Intake:
     def __init__(self, input_bundle_path, shared_folder_path):
         self.input_path = input_bundle_path
         self.shared_path = shared_folder_path
-        self.run_id = f"run_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}"
-        self.run_dir = os.path.join("runs", self.run_id)
 
-        # Ensure run directory exists
+        # 1. Generate a unique Run ID (e.g., run_20260302_174500_a1b2c3d4)
+        self.run_id = f"run_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}"
+
+        # 2. Define the run directory inside the project root's 'runs' folder
+        # We use os.path.abspath(__file__) to find where THIS script is, then go up 2 levels
+        # (agents -> project_root -> runs)
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.run_dir = os.path.join(project_root, "runs", self.run_id)
+
+        # 3. Create the folder immediately
         os.makedirs(self.run_dir, exist_ok=True)
 
     def classify_file(self, filename):
@@ -36,27 +44,23 @@ class AgentA_Intake:
     def extract_metadata_candidates(self, file_path):
         """
         Scans text files (JSON/YAML) for potential ID references.
-        For PDFs/Images, we just return placeholders for Agent B (OCR) to fill later.
         """
         candidates = {
             "potential_vendor_ids": [],
             "potential_po_refs": []
         }
-        
+
         # Simple text scan for JSON files only
         if file_path.endswith('.json'):
             try:
                 with open(file_path, 'r') as f:
                     content = json.load(f)
-                    # Recursively search for keys like 'vendor_id' or 'po_number'
-                    # This is a basic implementation for the prototype
                     str_content = str(content)
 
-                    # Regex to find patterns like V-101, V-1001 or PO-5001
-                    # Allow 3–4 digit vendor IDs to match values such as V-101 and V-2207
+                    # Regex to find patterns like V-101 or PO-5001
                     vendor_matches = re.findall(r'V-\d{3,4}', str_content)
                     po_matches = re.findall(r'PO-\d{4}', str_content)
-                    
+
                     candidates["potential_vendor_ids"].extend(vendor_matches)
                     candidates["potential_po_refs"].extend(po_matches)
             except Exception as e:
@@ -65,9 +69,8 @@ class AgentA_Intake:
         return candidates
 
     def run(self):
-        # Use ASCII-only logging to avoid encoding issues on some Windows terminals
         print(f"[Agent A] Starting intake for Run ID: {self.run_id}")
-        
+
         context_packet = {
             "run_id": self.run_id,
             "timestamp": datetime.datetime.now().isoformat(),
@@ -84,43 +87,44 @@ class AgentA_Intake:
             }
         }
 
-        # 1. Process Shared Files (Vendor Master, Policies)
+        # --- Step 1: Process Shared Files ---
         print("   -> Loading Shared Configuration...")
-        for filename in os.listdir(self.shared_path):
-            file_path = os.path.join(self.shared_path, filename)
-            doc_type = self.classify_file(filename)
+        if os.path.exists(self.shared_path):
+            for filename in os.listdir(self.shared_path):
+                file_path = os.path.join(self.shared_path, filename)
+                doc_type = self.classify_file(filename)
 
-            # Copy file to run directory for audit trail (snapshotting state)
-            shutil.copy(file_path, os.path.join(self.run_dir, filename))
+                # Snapshot file
+                shutil.copy(file_path, os.path.join(self.run_dir, filename))
 
-            # Extract metadata from shared JSON files as well (e.g. vendor_master.json)
-            shared_meta = self.extract_metadata_candidates(file_path)
-            context_packet["metadata_candidates"]["vendor_ids"].extend(shared_meta["potential_vendor_ids"])
-            context_packet["metadata_candidates"]["po_refs"].extend(shared_meta["potential_po_refs"])
+                # Extract metadata
+                shared_meta = self.extract_metadata_candidates(file_path)
+                context_packet["metadata_candidates"]["vendor_ids"].extend(shared_meta["potential_vendor_ids"])
+                context_packet["metadata_candidates"]["po_refs"].extend(shared_meta["potential_po_refs"])
 
-            context_packet["files"].append({
-                "filename": filename,
-                "type": doc_type,
-                "source": "shared",
-                "path": os.path.join(self.run_dir, filename)
-            })
+                context_packet["files"].append({
+                    "filename": filename,
+                    "type": doc_type,
+                    "source": "shared",
+                    "path": os.path.join(self.run_dir, filename)
+                })
+        else:
+            print(f"   [Warning] Shared path not found: {self.shared_path}")
 
-        # 2. Process Input Bundle (Invoice, PO, GRN)
+        # --- Step 2: Process Input Bundle (Invoice, PO, etc.) ---
         print(f"   -> Processing Input Bundle: {self.input_path}")
         if os.path.exists(self.input_path):
             for filename in os.listdir(self.input_path):
                 file_path = os.path.join(self.input_path, filename)
-                
-                # Skip directories
-                if os.path.isdir(file_path):
-                    continue
+
+                if os.path.isdir(file_path): continue
 
                 doc_type = self.classify_file(filename)
-                
-                # Copy file to run dir
+
+                # Snapshot file
                 shutil.copy(file_path, os.path.join(self.run_dir, filename))
 
-                # Extract basic metadata
+                # Extract metadata
                 meta = self.extract_metadata_candidates(file_path)
                 context_packet["metadata_candidates"]["vendor_ids"].extend(meta["potential_vendor_ids"])
                 context_packet["metadata_candidates"]["po_refs"].extend(meta["potential_po_refs"])
@@ -136,10 +140,11 @@ class AgentA_Intake:
             return
 
         # Deduplicate candidates
-        context_packet["metadata_candidates"]["vendor_ids"] = list(set(context_packet["metadata_candidates"]["vendor_ids"]))
+        context_packet["metadata_candidates"]["vendor_ids"] = list(
+            set(context_packet["metadata_candidates"]["vendor_ids"]))
         context_packet["metadata_candidates"]["po_refs"] = list(set(context_packet["metadata_candidates"]["po_refs"]))
 
-        # 3. Save Context Packet
+        # --- Step 3: Save Context Packet ---
         output_path = os.path.join(self.run_dir, "context_packet.json")
         with open(output_path, 'w') as f:
             json.dump(context_packet, f, indent=4)
@@ -147,16 +152,26 @@ class AgentA_Intake:
         print(f"[Agent A] Complete. Context Packet saved to: {output_path}")
         return output_path
 
-# --- Execution Block (for testing) ---
+
+# --- Execution Block (Standalone Testing) ---
 if __name__ == "__main__":
-    # Point this to one of your test scenarios
-    # The available clean scenario folder is "input_bundles/s01" in this project.
-    TEST_BUNDLE_PATH = "input_bundles/s01"
-    SHARED_PATH = "input_bundles/shared"
-    
-    # Check if folders exist before running
+    # This block only runs when you execute this script directly (e.g. Right Click -> Run)
+
+    # 1. Dynamic Path Finding (Works in PyCharm, VS Code, Terminal)
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(current_script_dir)
+
+    # 2. Define Test Paths
+    # We default to 's01' as the standard clean test case
+    TEST_BUNDLE_PATH = os.path.join(project_root, "input_bundles", "s01")
+    SHARED_PATH = os.path.join(project_root, "input_bundles", "shared")
+
+    print(f"--- Environment Check ---")
+    print(f"Project Root: {project_root}")
+
     if os.path.exists(TEST_BUNDLE_PATH) and os.path.exists(SHARED_PATH):
         agent = AgentA_Intake(TEST_BUNDLE_PATH, SHARED_PATH)
         agent.run()
     else:
-        print("⚠️ Please create the 'input_bundles/s01_clean' and 'input_bundles/shared' folders first.")
+        print("\n⚠️  Setup Error: Input folders not found.")
+        print(f"Checked: {TEST_BUNDLE_PATH}")
