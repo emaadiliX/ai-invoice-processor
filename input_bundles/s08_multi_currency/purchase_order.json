@@ -1,0 +1,19 @@
+{
+  "po_id": "PO-5587",
+  "issued_by": "Test Corp",
+  "vendor_id": "V-1046",
+  "issue_date": "2024-03-25",
+  "currency": "USD",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "High-Precision Sensors",
+      "quantity_ordered": 75,
+      "agreed_unit_price": 80.00,
+      "total": 6000.00
+    }
+  ],
+  "subtotal": 6000.00,
+  "status": "OPEN",
+  "notes": "May be sourced internationally"
+}

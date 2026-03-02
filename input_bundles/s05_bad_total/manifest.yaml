@@ -1,0 +1,11 @@
+scenario_id: "s05_bad_total"
+description: "Invoice header total $12,000 but line items sum to $11,000. Math error in header total."
+invoice_file: "invoice.pdf"
+purchase_order_file: "purchase_order.json"
+grn_file: "grn.json"
+vendor_master_file: "../vendor_master.json"
+tax_rules_file: "../tax_rules.yaml"
+approval_policy_file: "../approval_policy.yaml"
+expected_outcome: "HOLD_FOR_APPROVAL"
+expected_exceptions:
+  - "HEADER_TOTAL_MISMATCH"

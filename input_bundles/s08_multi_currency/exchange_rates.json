@@ -1,0 +1,12 @@
+{
+  "rates_date": "2024-04-10",
+  "reference_currency": "USD",
+  "rates": {
+    "EUR": 1.09,
+    "GBP": 1.27,
+    "JPY": 0.0067,
+    "CAD": 0.74
+  },
+  "source": "ECB - European Central Bank",
+  "notes": "Official rates as of morning market open on date"
+}

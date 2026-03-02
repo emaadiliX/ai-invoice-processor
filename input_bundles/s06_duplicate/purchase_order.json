@@ -1,0 +1,25 @@
+{
+  "po_id": "PO-5586",
+  "issued_by": "Test Corp",
+  "vendor_id": "V-1045",
+  "issue_date": "2024-03-20",
+  "currency": "USD",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Steel Components",
+      "quantity_ordered": 300,
+      "agreed_unit_price": 15.00,
+      "total": 4500.00
+    },
+    {
+      "line_id": 2,
+      "description": "Assembly Labor",
+      "quantity_ordered": 40,
+      "agreed_unit_price": 50.00,
+      "total": 2000.00
+    }
+  ],
+  "subtotal": 6500.00,
+  "status": "OPEN"
+}

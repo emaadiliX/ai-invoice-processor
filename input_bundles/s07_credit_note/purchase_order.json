@@ -1,0 +1,19 @@
+{
+  "po_id": "PO-5583",
+  "issued_by": "Test Corp",
+  "vendor_id": "V-1042",
+  "issue_date": "2024-03-01",
+  "currency": "USD",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Office Chairs",
+      "quantity_ordered": 100,
+      "agreed_unit_price": 150.00,
+      "total": 15000.00
+    }
+  ],
+  "subtotal": 15000.00,
+  "status": "OPEN",
+  "notes": "20 units returned for defects per RMA-2024-551"
+}

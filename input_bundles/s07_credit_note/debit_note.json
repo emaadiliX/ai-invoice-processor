@@ -1,0 +1,19 @@
+{
+  "debit_note_id": "DN-2024-001",
+  "rma_reference": "RMA-2024-551",
+  "po_reference": "PO-5583",
+  "returned_by": "Test Warehouse - NY",
+  "return_date": "2024-04-02",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Office Chairs",
+      "quantity_returned": 20,
+      "reason": "DEFECTIVE",
+      "condition_notes": "Structural damage in arrivals"
+    }
+  ],
+  "total_items_returned": 20,
+  "status": "COMPLETED",
+  "authorization": "Acme Supplies approved RMA-2024-551"
+}

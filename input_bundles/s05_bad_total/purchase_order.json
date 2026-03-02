@@ -1,0 +1,25 @@
+{
+  "po_id": "PO-5585",
+  "issued_by": "Test Corp",
+  "vendor_id": "V-1044",
+  "issue_date": "2024-03-15",
+  "currency": "USD",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Circuit Boards",
+      "quantity_ordered": 200,
+      "agreed_unit_price": 25.00,
+      "total": 5000.00
+    },
+    {
+      "line_id": 2,
+      "description": "Power Supplies",
+      "quantity_ordered": 100,
+      "agreed_unit_price": 60.00,
+      "total": 6000.00
+    }
+  ],
+  "subtotal": 11000.00,
+  "status": "OPEN"
+}

@@ -1,0 +1,16 @@
+{
+  "grn_id": "GRN-9907",
+  "po_reference": "PO-5587",
+  "received_by": "Test Warehouse - NY",
+  "receipt_date": "2024-04-08",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "High-Precision Sensors",
+      "quantity_received": 75,
+      "condition": "GOOD",
+      "notes": "Shipped from Munich via DHL"
+    }
+  ],
+  "fully_received": true
+}

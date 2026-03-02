@@ -1,0 +1,12 @@
+scenario_id: "s06_duplicate"
+description: "Invoice INV-2024-006 submitted twice with identical details. System must detect and block duplicate."
+invoice_file: "invoice.pdf"
+invoice_file_duplicate: "invoice_duplicate.pdf"
+purchase_order_file: "purchase_order.json"
+grn_file: "grn.json"
+vendor_master_file: "../vendor_master.json"
+tax_rules_file: "../tax_rules.yaml"
+approval_policy_file: "../approval_policy.yaml"
+expected_outcome: "BLOCKED"
+expected_exceptions:
+  - "DUPLICATE_INVOICE"

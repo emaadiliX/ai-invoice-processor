@@ -1,0 +1,21 @@
+{
+  "grn_id": "GRN-9905",
+  "po_reference": "PO-5585",
+  "received_by": "Test Warehouse - NY",
+  "receipt_date": "2024-03-26",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Circuit Boards",
+      "quantity_received": 200,
+      "condition": "GOOD"
+    },
+    {
+      "line_id": 2,
+      "description": "Power Supplies",
+      "quantity_received": 100,
+      "condition": "GOOD"
+    }
+  ],
+  "fully_received": true
+}

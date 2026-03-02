@@ -1,0 +1,18 @@
+{
+  "po_id": "PO-5584",
+  "issued_by": "Test Corp",
+  "vendor_id": "V-1043",
+  "issue_date": "2024-03-10",
+  "currency": "USD",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Office Desks",
+      "quantity_ordered": 50,
+      "agreed_unit_price": 150.00,
+      "total": 7500.00
+    }
+  ],
+  "subtotal": 7500.00,
+  "status": "OPEN"
+}

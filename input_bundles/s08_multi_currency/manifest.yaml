@@ -1,0 +1,12 @@
+scenario_id: "s08_multi_currency"
+description: "PO placed in USD but vendor invoiced in EUR. Requires currency conversion and exchange rate validation."
+invoice_file: "invoice.pdf"
+purchase_order_file: "purchase_order.json"
+grn_file: "grn.json"
+vendor_master_file: "../vendor_master.json"
+tax_rules_file: "../tax_rules.yaml"
+approval_policy_file: "../approval_policy.yaml"
+exchange_rates_file: "exchange_rates.json"
+expected_outcome: "ROUTE_APPROVAL"
+expected_exceptions:
+  - "MULTI_CURRENCY"

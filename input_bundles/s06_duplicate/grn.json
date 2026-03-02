@@ -1,0 +1,21 @@
+{
+  "grn_id": "GRN-9906",
+  "po_reference": "PO-5586",
+  "received_by": "Test Warehouse - NY",
+  "receipt_date": "2024-03-28",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Steel Components",
+      "quantity_received": 300,
+      "condition": "GOOD"
+    },
+    {
+      "line_id": 2,
+      "description": "Assembly Labor",
+      "quantity_received": 40,
+      "condition": "COMPLETED"
+    }
+  ],
+  "fully_received": true
+}

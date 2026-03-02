@@ -1,0 +1,11 @@
+scenario_id: "s07_credit_note"
+description: "Vendor issues credit note (negative invoice) for $2,000 due to returned defective items. Requires different processing logic."
+invoice_file: "credit_note.pdf"
+purchase_order_file: "purchase_order.json"
+grn_file: "debit_note.json"
+vendor_master_file: "../vendor_master.json"
+tax_rules_file: "../tax_rules.yaml"
+approval_policy_file: "../approval_policy.yaml"
+expected_outcome: "ROUTE_APPROVAL"
+expected_exceptions:
+  - "CREDIT_NOTE"
