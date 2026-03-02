@@ -1,0 +1,15 @@
+{
+  "grn_id": "TEST-GRN-0011",
+  "po_reference": "TEST-PO-0011",
+  "received_by": "WAREHOUSE_DEPT",
+  "receipt_date": "2025-03-28",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Industrial Equipment",
+      "quantity_received": 1,
+      "condition": "GOOD"
+    }
+  ],
+  "fully_received": true
+}

@@ -1,0 +1,15 @@
+{
+  "grn_id": "TEST-GRN-0014A",
+  "po_reference": "TEST-PO-0014",
+  "received_by": "WAREHOUSE_DEPT",
+  "receipt_date": "2025-04-05",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Storage Units",
+      "quantity_received": 120,
+      "condition": "GOOD"
+    }
+  ],
+  "fully_received": false
+}

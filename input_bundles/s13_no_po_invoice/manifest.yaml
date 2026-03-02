@@ -1,0 +1,11 @@
+scenario_id: "s13_no_po_invoice"
+description: "Invoice has no PO reference number. Value of $3,520 is below the non-PO auto-approve threshold of $5,000. Routes to DEPT_HEAD for approval per non-PO invoice policy. No 3-way matching possible."
+invoice_file: "invoice.pdf"
+purchase_order_file: null
+grn_file: null
+vendor_master_file: "../shared/vendor_master.json"
+tax_rules_file: "../shared/tax_rules.yaml"
+approval_policy_file: "../shared/approval_policy.yaml"
+expected_outcome: "ROUTE_TO_DEPT_HEAD"
+expected_exceptions:
+  - "MISSING_PO_REFERENCE"

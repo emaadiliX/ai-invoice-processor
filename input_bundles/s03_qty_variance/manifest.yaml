@@ -1,0 +1,11 @@
+scenario_id: "s03_qty_variance"
+description: "Vendor invoiced for 120 chairs but PO only ordered 100. Variance exceeds tolerance."
+invoice_file: "invoice.pdf"
+purchase_order_file: "purchase_order.json"
+grn_file: "grn.json"
+vendor_master_file: "../vendor_master.json"
+tax_rules_file: "../tax_rules.yaml"
+approval_policy_file: "../approval_policy.yaml"
+expected_outcome: "HOLD_FOR_APPROVAL"
+expected_exceptions:
+  - "QUANTITY_VARIANCE"

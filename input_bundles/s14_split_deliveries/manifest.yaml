@@ -1,0 +1,12 @@
+scenario_id: "s14_split_deliveries"
+description: "PO line for 200 Storage Units fulfilled across two GRNs (GRN-0014A: 120 units, GRN-0014B: 80 units). Invoice is for full 200 units. Matching engine must aggregate GRN quantities. Result: full 3-way match, auto-post."
+invoice_file: "invoice.pdf"
+purchase_order_file: "purchase_order.json"
+grn_files:
+  - "grn_1.json"
+  - "grn_2.json"
+vendor_master_file: "../shared/vendor_master.json"
+tax_rules_file: "../shared/tax_rules.yaml"
+approval_policy_file: "../shared/approval_policy.yaml"
+expected_outcome: "AUTO_POST"
+expected_exceptions: []

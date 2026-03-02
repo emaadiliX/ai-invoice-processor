@@ -1,0 +1,11 @@
+scenario_id: "s12_low_ocr_confidence"
+description: "Invoice PDF has degraded print quality. OCR confidence on total_amount and tax_amount falls below the 0.80 threshold. Pipeline routes to manual review before matching proceeds."
+invoice_file: "invoice.pdf"
+purchase_order_file: "purchase_order.json"
+grn_file: "grn.json"
+vendor_master_file: "../shared/vendor_master.json"
+approval_policy_file: "../shared/approval_policy.yaml"
+expected_outcome: "ROUTE_TO_MANUAL_REVIEW"
+expected_exceptions:
+  - "LOW_OCR_CONFIDENCE"
+notes: "OCR confidence scores are mocked in extracted_invoice.json for determinism. See mock_extraction.json."

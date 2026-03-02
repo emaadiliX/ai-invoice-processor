@@ -1,0 +1,15 @@
+{
+  "grn_id": "TEST-GRN-0003",
+  "po_reference": "TEST-PO-0003",
+  "received_by": "WAREHOUSE_DEPT",
+  "receipt_date": "2024-03-18",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Office Chairs",
+      "quantity_received": 100,
+      "condition": "GOOD"
+    }
+  ],
+  "fully_received": true
+}

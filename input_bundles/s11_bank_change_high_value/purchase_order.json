@@ -1,0 +1,18 @@
+{
+  "po_id": "TEST-PO-0011",
+  "issued_by": "Example Buyer Corp",
+  "vendor_id": "V-1011",
+  "issue_date": "2025-03-20",
+  "currency": "USD",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Industrial Equipment",
+      "quantity_ordered": 1,
+      "agreed_unit_price": 48500.00,
+      "total": 48500.00
+    }
+  ],
+  "subtotal": 48500.00,
+  "status": "OPEN"
+}

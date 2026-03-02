@@ -1,0 +1,10 @@
+scenario_id: "s15_clean_small_invoice"
+description: "Perfectly clean invoice for $132.00. Full 3-way match with PO and GRN. Correct tax rate. Known active vendor. No anomalies. Amount well below auto-post threshold. Zero exceptions expected."
+invoice_file: "invoice.pdf"
+purchase_order_file: "purchase_order.json"
+grn_file: "grn.json"
+vendor_master_file: "../shared/vendor_master.json"
+tax_rules_file: "../shared/tax_rules.yaml"
+approval_policy_file: "../shared/approval_policy.yaml"
+expected_outcome: "AUTO_POST"
+expected_exceptions: []

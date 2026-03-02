@@ -1,0 +1,15 @@
+{
+  "grn_id": "TEST-GRN-0012",
+  "po_reference": "TEST-PO-0012",
+  "received_by": "WAREHOUSE_DEPT",
+  "receipt_date": "2024-04-03",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Office Supplies",
+      "quantity_received": 50,
+      "condition": "GOOD"
+    }
+  ],
+  "fully_received": true
+}

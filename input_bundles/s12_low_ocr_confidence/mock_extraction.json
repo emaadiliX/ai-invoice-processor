@@ -1,0 +1,32 @@
+{
+  "invoice_id": "TEST-INV-0012",
+  "po_reference": "TEST-PO-0012",
+  "vendor_id": "V-1012",
+  "invoice_date": "2024-04-05",
+  "currency": "USD",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Office Supplies",
+      "quantity": 50,
+      "unit_price": 20.00,
+      "total": 1000.00
+    }
+  ],
+  "subtotal": 1000.00,
+  "tax_amount": null,
+  "total_amount": null,
+  "confidence_scores": {
+    "invoice_id": 0.91,
+    "po_reference": 0.88,
+    "vendor_name": 0.62,
+    "invoice_date": 0.85,
+    "line_item_description": 0.79,
+    "line_item_quantity": 0.83,
+    "line_item_unit_price": 0.80,
+    "tax_amount": 0.38,
+    "total_amount": 0.45
+  },
+  "low_confidence_fields": ["tax_amount", "total_amount", "vendor_name"],
+  "extraction_notes": "Print quality degraded on lower half of document. Tax and total fields illegible. Vendor name partially obscured."
+}

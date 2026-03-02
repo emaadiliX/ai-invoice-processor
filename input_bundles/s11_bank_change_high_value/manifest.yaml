@@ -1,0 +1,12 @@
+scenario_id: "s11_bank_change_high_value"
+description: "Vendor bank account changed 3 days before invoice submission. Invoice value $53,350 exceeds high-value threshold of $25,000. Triggers fraud anomaly exception and escalates to finance approver."
+invoice_file: "invoice.pdf"
+purchase_order_file: "purchase_order.json"
+grn_file: "grn.json"
+vendor_master_file: "../shared/vendor_master.json"
+tax_rules_file: "../shared/tax_rules.yaml"
+approval_policy_file: "../shared/approval_policy.yaml"
+expected_outcome: "ESCALATE_TO_FINANCE_APPROVER"
+expected_exceptions:
+  - "BANK_ACCOUNT_CHANGE_ANOMALY"
+  - "HIGH_VALUE_FLAG"

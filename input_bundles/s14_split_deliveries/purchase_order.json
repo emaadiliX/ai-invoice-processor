@@ -1,0 +1,18 @@
+{
+  "po_id": "TEST-PO-0014",
+  "issued_by": "Example Buyer Corp",
+  "vendor_id": "V-1014",
+  "issue_date": "2025-03-01",
+  "currency": "USD",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Storage Units",
+      "quantity_ordered": 200,
+      "agreed_unit_price": 75.00,
+      "total": 15000.00
+    }
+  ],
+  "subtotal": 15000.00,
+  "status": "PARTIALLY_RECEIVED"
+}
