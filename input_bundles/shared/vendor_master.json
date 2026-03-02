@@ -1,0 +1,72 @@
+[
+  {
+    "vendor_id": "V-101",
+    "name": "Apex Office Supplies Ltd",
+    "address": "1200 Market Street, Springfield, US",
+    "tax_id": "US-99-1234567",
+    "payment_terms": "NET_30",
+    "bank_details": {
+      "bank_name": "First National Bank",
+      "iban": "US00FNBA00000000123456",
+      "swift": "FNBAUS00",
+      "account_number": "100200300"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-102",
+    "name": "Global Industrial Components GmbH",
+    "address": "Industriestrasse 45, 60314 Frankfurt, DE",
+    "tax_id": "DE123456789",
+    "payment_terms": "NET_45",
+    "bank_details": {
+      "bank_name": "Deutsche Handelsbank",
+      "iban": "DE02120300000000202020",
+      "swift": "DEUTDEFF",
+      "account_number": "20202020"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-103",
+    "name": "Britannia Tech Services Ltd",
+    "address": "25 High Street, London, GB",
+    "tax_id": "GB999999973",
+    "payment_terms": "NET_15",
+    "bank_details": {
+      "bank_name": "Royal City Bank",
+      "iban": "GB29RBOS60161331926819",
+      "swift": "RBOSGB2L",
+      "account_number": "31926819"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-104",
+    "name": "Continental Logistics Inc",
+    "address": "420 Harbor Road, Seattle, US",
+    "tax_id": "US-11-7654321",
+    "payment_terms": "NET_30",
+    "bank_details": {
+      "bank_name": "Pacific Coast Bank",
+      "iban": "US00PCBA00000000456789",
+      "swift": "PCBAUS00",
+      "account_number": "400500600"
+    },
+    "bank_change_flag": true
+  },
+  {
+    "vendor_id": "V-105",
+    "name": "EuroChem Supplies GmbH",
+    "address": "Chemiepark 7, 40470 Düsseldorf, DE",
+    "tax_id": "DE987654321",
+    "payment_terms": "NET_60",
+    "bank_details": {
+      "bank_name": "Rheinische Bank",
+      "iban": "DE44500105175407324931",
+      "swift": "RHINDEFF",
+      "account_number": "73049231"
+    },
+    "bank_change_flag": false
+  }
+]
