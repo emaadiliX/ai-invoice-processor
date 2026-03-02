@@ -1,0 +1,12 @@
+tolerances:
+  price_variance_pct: 1.0        # Allow up to 1% price variance before flagging
+  qty_variance_pct: 5.0          # Allow up to 5% quantity variance before flagging
+
+approval_thresholds:
+  manager_approval_limit: 5000.0 # In invoice currency units; above this requires manager approval
+
+matching_rules:
+  require_grn: true              # Enforce 3-way match (PO, GRN, Invoice)
+
+tax_rules:
+  allowable_tax_diff: 0.05       # Allowable absolute difference (e.g., 0.05 = 5 percentage points)

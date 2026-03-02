@@ -1,0 +1,18 @@
+{
+  "po_id": "PO-6127",
+  "issued_by": "Test Corp",
+  "vendor_id": "V-2207",
+  "issue_date": "2024-02-05",
+  "currency": "USD",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Standing Desks",
+      "quantity_ordered": 40,
+      "agreed_unit_price": 250.00,
+      "total": 10000.00
+    }
+  ],
+  "subtotal": 10000.00,
+  "status": "OPEN"
+}

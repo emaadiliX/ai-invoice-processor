@@ -1,0 +1,67 @@
+{
+    "run_id": "run_20260302_171840_e1b25435",
+    "timestamp": "2026-03-02T17:18:40.162135",
+    "status": "intake_complete",
+    "files": [
+        {
+            "filename": "approval_policy.yaml",
+            "type": "purchase_order_data",
+            "source": "shared",
+            "path": "runs\\run_20260302_171840_e1b25435\\approval_policy.yaml"
+        },
+        {
+            "filename": "tax_rules.yaml",
+            "type": "tax_rules",
+            "source": "shared",
+            "path": "runs\\run_20260302_171840_e1b25435\\tax_rules.yaml"
+        },
+        {
+            "filename": "vendor_master.json",
+            "type": "vendor_master_record",
+            "source": "shared",
+            "path": "runs\\run_20260302_171840_e1b25435\\vendor_master.json"
+        },
+        {
+            "filename": "grn.json",
+            "type": "goods_receipt_data",
+            "source": "input_bundle",
+            "path": "runs\\run_20260302_171840_e1b25435\\grn.json"
+        },
+        {
+            "filename": "invoice.pdf",
+            "type": "invoice_document",
+            "source": "input_bundle",
+            "path": "runs\\run_20260302_171840_e1b25435\\invoice.pdf"
+        },
+        {
+            "filename": "manifest.yaml",
+            "type": "unknown_file",
+            "source": "input_bundle",
+            "path": "runs\\run_20260302_171840_e1b25435\\manifest.yaml"
+        },
+        {
+            "filename": "purchase_order.json",
+            "type": "purchase_order_data",
+            "source": "input_bundle",
+            "path": "runs\\run_20260302_171840_e1b25435\\purchase_order.json"
+        }
+    ],
+    "metadata_candidates": {
+        "vendor_ids": [
+            "V-104",
+            "V-102",
+            "V-2207",
+            "V-103",
+            "V-101",
+            "V-105"
+        ],
+        "po_refs": [
+            "PO-6127"
+        ]
+    },
+    "system_paths": {
+        "input_bundle": "input_bundles/s01",
+        "run_directory": "runs\\run_20260302_171840_e1b25435",
+        "shared_config": "input_bundles/shared"
+    }
+}

@@ -1,0 +1,12 @@
+tax_rules:
+  - country_code: "US"
+    standard_rate: 0.07   # 7% standard sales tax
+    reduced_rate: 0.00    # 0% for exempt items
+
+  - country_code: "GB"
+    standard_rate: 0.20   # 20% standard VAT
+    reduced_rate: 0.05    # 5% reduced VAT (e.g., utilities)
+
+  - country_code: "DE"
+    standard_rate: 0.19   # 19% standard VAT
+    reduced_rate: 0.07    # 7% reduced VAT
