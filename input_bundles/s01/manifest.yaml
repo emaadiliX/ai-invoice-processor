@@ -1,0 +1,10 @@
+scenario_id: "s01_clean_match"
+description: "Clean invoice with perfect PO + GRN match. Should auto-post."
+invoice_file: "invoice.pdf"
+purchase_order_file: "purchase_order.json.txt"
+grn_file: "grn.json.txt"
+vendor_master_file: "../vendor_master.json"
+tax_rules_file: "../tax_rules.yaml"
+approval_policy_file: "../approval_policy.yaml"
+expected_outcome: "AUTO_POST"
+expected_exceptions: []
