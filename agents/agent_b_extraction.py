@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import base64
 from datetime import datetime
 
 import yaml
@@ -12,10 +13,21 @@ from dotenv import load_dotenv
 load_dotenv()
 
 CONFIDENCE_THRESHOLD = 0.80
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".tiff", ".bmp"}
 
 SCHEMA_PATH = os.path.join(
     os.path.dirname(__file__), "..", "schemas", "extracted_invoice_schema.json"
 )
+
+
+def is_pdf_file(file_path):
+    _, ext = os.path.splitext(file_path.lower())
+    return ext == ".pdf"
+
+
+def is_image_file(file_path):
+    _, ext = os.path.splitext(file_path.lower())
+    return ext in IMAGE_EXTENSIONS
 
 
 def extract_text_from_pdf(pdf_path):
@@ -29,12 +41,8 @@ def extract_text_from_pdf(pdf_path):
     return full_text
 
 
-def call_openai_for_extraction(invoice_text):
-    """Send invoice text to OpenAI and get structured extraction back."""
-    client = OpenAI()
-
-    system_prompt = """You are an invoice data extraction assistant.
-You will receive raw text extracted from an invoice PDF.
+EXTRACTION_SYSTEM_PROMPT = """You are an invoice data extraction assistant.
+You will receive raw text extracted from an invoice document.
 
 Extract the following fields and return them as a single JSON object:
 
@@ -70,13 +78,65 @@ Rules:
 - If text contains ??? or is clearly garbled, set that field to null with low confidence
 - vendor_id must always be null"""
 
+
+def call_openai_for_extraction(invoice_text):
+    """Send invoice text to OpenAI and get structured extraction back."""
+    client = OpenAI()
+
     user_prompt = f"Extract structured data from this invoice:\n\n{invoice_text}"
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.0,
+    )
+
+    result_text = response.choices[0].message.content
+    if result_text is None:
+        print("ERROR: OpenAI returned an empty response.")
+        sys.exit(1)
+
+    extracted = json.loads(result_text)
+    return extracted
+
+
+def call_openai_for_image_extraction(image_path):
+    """Send an invoice image directly to OpenAI Vision API for extraction."""
+    client = OpenAI()
+
+    with open(image_path, "rb") as f:
+        image_data = base64.b64encode(f.read()).decode("utf-8")
+
+    ext = os.path.splitext(image_path)[1].lower()
+    mime_types = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".tiff": "image/tiff",
+        ".bmp": "image/bmp",
+    }
+    mime_type = mime_types.get(ext, "image/png")
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Extract structured data from this invoice image:"},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{mime_type};base64,{image_data}"
+                        },
+                    },
+                ],
+            },
         ],
         response_format={"type": "json_object"},
         temperature=0.0,
@@ -134,8 +194,14 @@ def generate_run_id(scenario_id):
     return f"{scenario_id}_{timestamp}"
 
 
-def run_extraction(bundle_path):
-    """Run the full extraction pipeline for a single invoice bundle."""
+def run_extraction(bundle_path, run_dir=None):
+    """Run the full extraction pipeline for a single invoice bundle.
+
+    Args:
+        bundle_path: Path to the input bundle folder.
+        run_dir: Optional path to an existing run directory (e.g. from Agent A).
+                 If not provided, Agent B creates its own run directory.
+    """
 
     manifest_path = os.path.join(bundle_path, "manifest.yaml")
     with open(manifest_path, "r") as f:
@@ -156,27 +222,40 @@ def run_extraction(bundle_path):
         print("Using mock extraction data (skipped OpenAI call).")
         extracted = flag_low_confidence_fields(extracted)
     else:
-        print("Extracting text from PDF...")
-        invoice_text = extract_text_from_pdf(invoice_path)
+        if is_pdf_file(invoice_path):
+            print("Extracting text from PDF...")
+            invoice_text = extract_text_from_pdf(invoice_path)
 
-        if not invoice_text.strip():
-            print("ERROR: Could not extract any text from the PDF.")
+            if not invoice_text.strip():
+                print("ERROR: Could not extract any text from the PDF.")
+                sys.exit(1)
+
+            print(f"Extracted {len(invoice_text)} characters of text.")
+            print("Sending to OpenAI for field extraction...")
+            extracted = call_openai_for_extraction(invoice_text)
+
+        elif is_image_file(invoice_path):
+            print("Detected image invoice, using Vision API...")
+            extracted = call_openai_for_image_extraction(invoice_path)
+
+        else:
+            print(f"ERROR: Unsupported file type: {invoice_path}")
             sys.exit(1)
 
-        print(f"Extracted {len(invoice_text)} characters of text.")
-
-        print("Sending to OpenAI for field extraction...")
-        extracted = call_openai_for_extraction(invoice_text)
         print("Received structured data from OpenAI.")
-
         extracted = flag_low_confidence_fields(extracted)
 
-    validate_output(extracted)
+    is_valid = validate_output(extracted)
+    if not is_valid:
+        print("WARNING: Continuing with extraction despite schema validation issues.")
 
-    run_id = generate_run_id(scenario_id)
-    project_root = os.path.join(os.path.dirname(__file__), "..")
-    run_dir = os.path.join(project_root, "runs", run_id)
-    os.makedirs(run_dir, exist_ok=True)
+    if run_dir is None:
+        run_id = generate_run_id(scenario_id)
+        project_root = os.path.join(os.path.dirname(__file__), "..")
+        run_dir = os.path.join(project_root, "runs", run_id)
+        os.makedirs(run_dir, exist_ok=True)
+    else:
+        run_id = os.path.basename(run_dir)
 
     output_path = os.path.join(run_dir, "extracted_invoice.json")
     with open(output_path, "w") as f:
@@ -193,20 +272,24 @@ def run_extraction(bundle_path):
     return output_path
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python agent_b_extraction.py <path_to_input_bundle>")
-        print("Example: python agent_b_extraction.py input_bundles/s01")
-        sys.exit(1)
-
-    bundle_path = sys.argv[1]
-
-    if not os.path.isdir(bundle_path):
-        print(f"ERROR: Bundle path not found: {bundle_path}")
-        sys.exit(1)
-
-    run_extraction(bundle_path)
-
-
 if __name__ == "__main__":
-    main()
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    bundle = sys.argv[1] if len(sys.argv) > 1 else os.path.join(project_root, "input_bundles", "s01")
+
+    if not os.path.isdir(bundle):
+        print(f"Bundle not found: {bundle}")
+        sys.exit(1)
+
+    output = run_extraction(bundle)
+
+    with open(output, "r") as f:
+        result = json.load(f)
+
+    print("\nExtracted fields:")
+    for field in ["invoice_id", "invoice_date", "due_date", "vendor_name", "vendor_id",
+                   "po_reference", "currency", "subtotal", "tax_amount", "total_amount"]:
+        print(f"  {field}: {result.get(field)}")
+
+    print(f"\nLine items: {len(result.get('line_items', []))}")
+    print(f"Low confidence: {result.get('low_confidence_fields', [])}")

@@ -1,8 +1,10 @@
 {
   "invoice_id": "TEST-INV-0012",
-  "po_reference": "TEST-PO-0012",
-  "vendor_id": "V-1012",
   "invoice_date": "2024-04-05",
+  "due_date": null,
+  "vendor_name": "Apex Off1ce Suppl1es",
+  "vendor_id": "V-1012",
+  "po_reference": "TEST-PO-0012",
   "currency": "USD",
   "line_items": [
     {
