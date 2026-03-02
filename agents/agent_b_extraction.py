@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import csv
 import base64
 from datetime import datetime
 
@@ -20,18 +21,16 @@ SCHEMA_PATH = os.path.join(
 )
 
 
-def is_pdf_file(file_path):
-    _, ext = os.path.splitext(file_path.lower())
-    return ext == ".pdf"
-
-
-def is_image_file(file_path):
-    _, ext = os.path.splitext(file_path.lower())
-    return ext in IMAGE_EXTENSIONS
+def get_file_type(file_path):
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext == ".pdf":
+        return "pdf"
+    if ext in IMAGE_EXTENSIONS:
+        return "image"
+    return "unknown"
 
 
 def extract_text_from_pdf(pdf_path):
-    """Read all pages of a PDF and return the combined text."""
     full_text = ""
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
@@ -80,7 +79,6 @@ Rules:
 
 
 def call_openai_for_extraction(invoice_text):
-    """Send invoice text to OpenAI and get structured extraction back."""
     client = OpenAI()
 
     user_prompt = f"Extract structured data from this invoice:\n\n{invoice_text}"
@@ -105,7 +103,6 @@ def call_openai_for_extraction(invoice_text):
 
 
 def call_openai_for_image_extraction(image_path):
-    """Send an invoice image directly to OpenAI Vision API for extraction."""
     client = OpenAI()
 
     with open(image_path, "rb") as f:
@@ -152,7 +149,6 @@ def call_openai_for_image_extraction(image_path):
 
 
 def flag_low_confidence_fields(extracted_data):
-    """Check confidence scores and build the low_confidence_fields list."""
     scores = extracted_data.get("confidence_scores", {})
     low_fields = []
 
@@ -165,7 +161,6 @@ def flag_low_confidence_fields(extracted_data):
 
 
 def validate_output(extracted_data):
-    """Validate the extracted data against the JSON schema."""
     with open(SCHEMA_PATH, "r") as f:
         schema = json.load(f)
 
@@ -179,7 +174,6 @@ def validate_output(extracted_data):
 
 
 def check_for_mock_extraction(bundle_path):
-    """If a mock_extraction.json exists in the bundle, use it instead of calling OpenAI."""
     mock_path = os.path.join(bundle_path, "mock_extraction.json")
     if os.path.exists(mock_path):
         print(f"Found mock extraction at {mock_path}, using it directly.")
@@ -188,21 +182,36 @@ def check_for_mock_extraction(bundle_path):
     return None
 
 
+def write_line_items_csv(extracted_data, csv_path):
+    scores = extracted_data.get("confidence_scores", {})
+    line_confidence = round(
+        sum(scores.get(k, 0) for k in ["line_item_description", "line_item_quantity", "line_item_unit_price"]) / 3, 2
+    )
+    po_ref = extracted_data.get("po_reference")
+
+    fieldnames = ["line_no", "description", "quantity", "unit_price", "total", "po_line_ref", "confidence"]
+
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for item in extracted_data.get("line_items", []):
+            writer.writerow({
+                "line_no": item.get("line_id"),
+                "description": item.get("description"),
+                "quantity": item.get("quantity"),
+                "unit_price": item.get("unit_price"),
+                "total": item.get("total"),
+                "po_line_ref": po_ref,
+                "confidence": line_confidence,
+            })
+
+
 def generate_run_id(scenario_id):
-    """Create a unique run ID from the scenario name and current timestamp."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"{scenario_id}_{timestamp}"
 
 
 def run_extraction(bundle_path, run_dir=None):
-    """Run the full extraction pipeline for a single invoice bundle.
-
-    Args:
-        bundle_path: Path to the input bundle folder.
-        run_dir: Optional path to an existing run directory (e.g. from Agent A).
-                 If not provided, Agent B creates its own run directory.
-    """
-
     manifest_path = os.path.join(bundle_path, "manifest.yaml")
     with open(manifest_path, "r") as f:
         manifest = yaml.safe_load(f)
@@ -222,7 +231,9 @@ def run_extraction(bundle_path, run_dir=None):
         print("Using mock extraction data (skipped OpenAI call).")
         extracted = flag_low_confidence_fields(extracted)
     else:
-        if is_pdf_file(invoice_path):
+        file_type = get_file_type(invoice_path)
+
+        if file_type == "pdf":
             print("Extracting text from PDF...")
             invoice_text = extract_text_from_pdf(invoice_path)
 
@@ -234,7 +245,7 @@ def run_extraction(bundle_path, run_dir=None):
             print("Sending to OpenAI for field extraction...")
             extracted = call_openai_for_extraction(invoice_text)
 
-        elif is_image_file(invoice_path):
+        elif file_type == "image":
             print("Detected image invoice, using Vision API...")
             extracted = call_openai_for_image_extraction(invoice_path)
 
@@ -260,6 +271,9 @@ def run_extraction(bundle_path, run_dir=None):
     output_path = os.path.join(run_dir, "extracted_invoice.json")
     with open(output_path, "w") as f:
         json.dump(extracted, f, indent=2)
+
+    csv_path = os.path.join(run_dir, "line_items.csv")
+    write_line_items_csv(extracted, csv_path)
 
     print()
     print(f"Extraction complete!")
