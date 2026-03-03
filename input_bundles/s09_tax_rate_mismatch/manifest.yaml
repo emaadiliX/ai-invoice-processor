@@ -1,0 +1,11 @@
+scenario_id: "s09_tax_rate_mismatch"
+description: "Invoice charges 15% tax on $5,000 subtotal but US jurisdiction rate is 7%. Variance of 8pp exceeds the 5pp tolerance. PO and GRN quantities match. Holds for approval on tax compliance."
+invoice_file: "invoice.png"
+purchase_order_file: "purchase_order.json"
+grn_file: "grn.json"
+vendor_master_file: "../shared/vendor_master.json"
+tax_rules_file: "../shared/tax_rules.yaml"
+approval_policy_file: "../shared/approval_policy.yaml"
+expected_outcome: "HOLD_FOR_APPROVAL"
+expected_exceptions:
+  - "TAX_RATE_MISMATCH"

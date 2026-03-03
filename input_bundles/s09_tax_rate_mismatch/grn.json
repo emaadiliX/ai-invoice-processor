@@ -1,0 +1,15 @@
+{
+  "grn_id": "TEST-GRN-0009",
+  "po_reference": "TEST-PO-0009",
+  "received_by": "WAREHOUSE_DEPT",
+  "receipt_date": "2024-06-10",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Premium Copy Paper A4 (Case)",
+      "quantity_received": 100,
+      "condition": "GOOD"
+    }
+  ],
+  "fully_received": true
+}
