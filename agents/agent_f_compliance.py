@@ -4,41 +4,90 @@ import re
 from pathlib import Path
 import yaml
 
-# --- Helpers ---
 
 def read_json(path: Path):
-    """Safely reads a JSON file."""
     if not path.exists():
         return {}
     return json.loads(path.read_text(encoding="utf-8"))
 
+
 def write_json(path: Path, payload):
-    """Writes data to a JSON file, creating parents if needed."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=4, ensure_ascii=False) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
 
 def read_yaml(path: Path):
-    """Safely reads a YAML file."""
-    if not path.exists():
+    if not path or not path.exists():
         return {}
-    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return data if isinstance(data, dict) else {}
 
-# --- Logic Functions ---
+
+def find_first_existing(paths):
+    for p in paths:
+        if p and p.exists():
+            return p
+    return None
+
+
+def get_manifest(bundle_dir: Path):
+    mp = bundle_dir / "manifest.yaml"
+    return read_yaml(mp) if mp.exists() else {}
+
+
+def resolve_extraction(bundle_dir: Path, run_dir: Path | None, explicit: str | None):
+    return find_first_existing([
+        Path(explicit).resolve() if explicit else None,
+        (run_dir / "extracted_invoice.json").resolve() if run_dir else None,
+        (bundle_dir / "extracted_invoice.json").resolve(),
+        (bundle_dir / "mock_extraction.json").resolve(),
+    ])
+
+
+def resolve_vendor_master(bundle_dir: Path, manifest: dict, explicit: str | None):
+    return find_first_existing([
+        Path(explicit).resolve() if explicit else None,
+        (bundle_dir / manifest.get("vendor_master_file", "")).resolve() if manifest.get("vendor_master_file") else None,
+        (bundle_dir.parent / "shared" / "vendor_master.json").resolve(),
+        (bundle_dir.parent / "vendor_master.json").resolve(),
+    ])
+
+
+def resolve_tax_rules(bundle_dir: Path, manifest: dict, explicit: str | None):
+    return find_first_existing([
+        Path(explicit).resolve() if explicit else None,
+        (bundle_dir / manifest.get("tax_rules_file", "")).resolve() if manifest.get("tax_rules_file") else None,
+        (bundle_dir.parent / "shared" / "tax_rules.yaml").resolve(),
+    ])
+
+
+def resolve_policy(bundle_dir: Path, manifest: dict, explicit: str | None):
+    return find_first_existing([
+        Path(explicit).resolve() if explicit else None,
+        (bundle_dir / manifest.get("approval_policy_file", "")).resolve() if manifest.get("approval_policy_file") else None,
+        (bundle_dir.parent / "shared" / "approval_policy.yaml").resolve(),
+        (bundle_dir.parent.parent / "policy" / "approval_policy.yaml").resolve(),
+    ])
+
+
+def resolve_vendor_resolution(bundle_dir: Path, run_dir: Path | None, explicit: str | None):
+    return find_first_existing([
+        Path(explicit).resolve() if explicit else None,
+        (run_dir / "vendor_resolution_result.json").resolve() if run_dir else None,
+        (bundle_dir / "vendor_resolution_result.json").resolve(),
+    ])
+
 
 def get_vendor_country(vendor_id: str, vendor_master: list):
-    """Determines country code (US, GB, DE) based on Vendor Master address."""
     if not vendor_id:
         return None, None
 
-    # Find the specific vendor in the master list
     vendor_record = next((v for v in vendor_master if v.get("vendor_id") == vendor_id), None)
     if not vendor_record:
         return None, None
 
-    # Get the address and normalize it to uppercase
     address = vendor_record.get("address", "").upper()
 
-    # Simple text matching to guess the country
     if "USA" in address or address.endswith(" US"):
         return "US", vendor_record
     if "UK" in address or "GB" in address or address.endswith(" GB"):
@@ -48,50 +97,50 @@ def get_vendor_country(vendor_id: str, vendor_master: list):
 
     return "UNKNOWN", vendor_record
 
+
 def validate_tax_id_format(tax_id: str, country_code: str) -> bool:
-    """Checks if a Tax ID matches the strict pattern for that country."""
     if not tax_id:
         return False
 
-    # Define the strict rules for each country
     patterns = {
-        "US": r"^US-\d{2}-\d{7}$",    # Example: US-12-1234567
-        "GB": r"^GB\d{9}$",           # Example: GB123456789
-        "DE": r"^DE\d{9}$"            # Example: DE123456789
+        "US": r"^US-\d{2}-\d{7}$",
+        "GB": r"^GB\d{9}$",
+        "DE": r"^DE\d{9}$"
     }
 
-    # Get the rule for identified country
     pattern = patterns.get(country_code)
-
     if pattern:
         return bool(re.match(pattern, tax_id))
 
-    # If country unknown, we assume True (can't fail what we don't know)
     return True
 
-# --- Main Execution ---
 
 def run_agent_f(args):
-    run_dir = Path(args.run_dir).resolve()
+    bundle_dir = Path(args.bundle_dir).resolve()
+    run_dir = Path(args.run_dir).resolve() if args.run_dir else None
+    out_dir = Path(args.out_dir).resolve() if args.out_dir else (run_dir or bundle_dir)
+    manifest = get_manifest(bundle_dir)
 
-    # Input files
-    extracted_path = run_dir / "extracted_invoice.json"
-    vendor_res_path = run_dir / "vendor_resolution_result.json"
-    context_path = run_dir / "context_packet.json"  # Fixed name
+    print(f"[Agent F] Starting Tax Compliance. Bundle: {bundle_dir.name}")
 
-    # Config files
-    tax_rules_path = run_dir / "tax_rules.yaml"
-    vendor_master_path = run_dir / "vendor_master.json"
-    policy_path = run_dir / "approval_policy.yaml"
+    extraction_path = resolve_extraction(bundle_dir, run_dir, args.extracted_invoice)
+    if not extraction_path:
+        raise FileNotFoundError("No extracted_invoice.json or mock_extraction.json found.")
 
-    print(f"[Agent F] Starting Tax Compliance. Run: {run_dir.name}")
+    vendor_res_path = resolve_vendor_resolution(bundle_dir, run_dir, args.vendor_resolution)
+    policy_path = resolve_policy(bundle_dir, manifest, args.policy)
+    tax_rules_path = resolve_tax_rules(bundle_dir, manifest, args.tax_rules)
+    vendor_master_path = resolve_vendor_master(bundle_dir, manifest, args.vendor_master)
 
-    # Load into memory
-    extracted_data = read_json(extracted_path)
-    resolution_data = read_json(vendor_res_path)
-    vendor_master = read_json(vendor_master_path)
-    tax_rules = read_yaml(tax_rules_path)
-    policy = read_yaml(policy_path)
+    extracted_data = read_json(extraction_path)
+    resolution_data = read_json(vendor_res_path) if vendor_res_path else {}
+    vendor_master_data = read_json(vendor_master_path) if vendor_master_path else []
+    vendor_master = vendor_master_data if isinstance(vendor_master_data, list) else []
+    tax_rules = read_yaml(tax_rules_path) if tax_rules_path else {}
+    policy = read_yaml(policy_path) if policy_path else {}
+
+    context_path = out_dir / "context_packet.json"
+    findings_path = out_dir / "findings.json"
 
     findings = []
     validation_result = {
@@ -99,15 +148,20 @@ def run_agent_f(args):
         "details": {}
     }
 
-    # 3. Get Vendor Info (Result from Agent C)
     vendor_id = resolution_data.get("matched_vendor_id")
     if not vendor_id:
         print("   -> Skipping: No matched vendor found.")
         validation_result["status"] = "SKIPPED"
-        write_json(run_dir / "tax_validation_result.json", validation_result)
-        return
+        write_json(out_dir / "tax_validation_result.json", validation_result)
+        return {
+            "result_path": str(out_dir / "tax_validation_result.json"),
+            "context_path": str(context_path),
+            "findings_path": str(findings_path),
+            "status": "SKIPPED",
+            "passed": True,
+            "finding_codes": [],
+        }
 
-    # 4. Determine Jurisdiction
     country_code, vendor_record = get_vendor_country(vendor_id, vendor_master)
     print(f"   -> Vendor Jurisdiction: {country_code}")
 
@@ -117,11 +171,11 @@ def run_agent_f(args):
             "code": "UNKNOWN_JURISDICTION",
             "severity": "MEDIUM",
             "message": f"Could not determine jurisdiction for vendor {vendor_id}",
-            "evidence": {"address": vendor_record.get("address", "N/A")}
+            "evidence": {"address": vendor_record.get("address", "N/A") if vendor_record else "N/A"},
+            "recommended_action": "verify_vendor_jurisdiction"
         })
         validation_result["status"] = "FLAGGED"
 
-    # 5. Validate Tax ID Format
     master_tax_id = vendor_record.get("tax_id") if vendor_record else None
 
     if master_tax_id and country_code in ["US", "GB", "DE"]:
@@ -131,51 +185,42 @@ def run_agent_f(args):
                 "code": "INVALID_TAX_ID",
                 "severity": "MEDIUM",
                 "message": f"Tax ID {master_tax_id} format invalid for {country_code}",
-                "evidence": {"tax_id": master_tax_id, "expected_format": country_code}
+                "evidence": {"tax_id": master_tax_id, "expected_format": country_code},
+                "recommended_action": "verify_tax_id"
             })
             validation_result["status"] = "FLAGGED"
 
-    # 6. Validate Tax Rates
-    header = extracted_data.get("header", {})
-
-    # Handle numbers safely
     try:
-        total_amount = float(header.get("total_amount", 0) or 0)
-        tax_amount = float(header.get("tax_amount", 0) or 0)
+        total_amount = float(extracted_data.get("total_amount", 0) or 0)
+        tax_amount = float(extracted_data.get("tax_amount", 0) or 0)
     except (ValueError, TypeError):
         total_amount = 0.0
         tax_amount = 0.0
 
-    # Calculate Subtotal (assuming Total = Subtotal + Tax)
-    subtotal = float(header.get("subtotal", 0) or 0)
+    subtotal = float(extracted_data.get("subtotal", 0) or 0)
     if subtotal == 0 and total_amount > 0:
         subtotal = total_amount - tax_amount
 
-    # MATH LOGIC
     if subtotal > 0:
         actual_rate = tax_amount / subtotal
 
-        # Find expected rate in our YAML rules
-        rule = next((r for r in tax_rules if r['country_code'] == country_code), None)
+        rules_list = tax_rules.get("tax_rules", [])
+        rule = next((r for r in rules_list if r['country_code'] == country_code), None)
 
         if rule:
             expected_rate = float(rule.get('standard_rate', 0))
             reduced_rate = float(rule.get('reduced_rate', 0))
-
-            # Get allowed difference from policy (default 0.05)
             tolerance = float(policy.get('tax_rules', {}).get('allowable_tax_diff', 0.05))
 
             diff_std = abs(actual_rate - expected_rate)
             diff_red = abs(actual_rate - reduced_rate)
 
-            # Check if it matches EITHER standard OR reduced rate
             match_std = diff_std <= tolerance
             match_red = diff_red <= tolerance
 
             print(f"   -> Tax Check: Actual {actual_rate:.2%} vs Expected {expected_rate:.2%} (Diff: {diff_std:.4f})")
 
             if not match_std and not match_red:
-                # MAJOR ERROR FOUND
                 findings.append({
                     "agent": "F",
                     "code": "TAX_RATE_MISMATCH",
@@ -186,23 +231,18 @@ def run_agent_f(args):
                         "tax_amount": tax_amount,
                         "actual_rate": round(actual_rate, 4),
                         "expected_rate": expected_rate
-                    }
+                    },
+                    "recommended_action": "escalate_tax_mismatch"
                 })
                 validation_result["status"] = "FAIL"
 
-    # 7. Write Outputs
-
-    # A. Save specific Tax Result
     validation_result["details"] = {
         "country": country_code,
-        "tax_id_valid": True if not any(f['code'] == 'INVALID_TAX_ID' for f in findings) else False
+        "tax_id_valid": not any(f['code'] == 'INVALID_TAX_ID' for f in findings)
     }
-    write_json(run_dir / "tax_validation_result.json", validation_result)
+    write_json(out_dir / "tax_validation_result.json", validation_result)
 
-    # B. Append to master findings list
-    findings_path = run_dir / "findings.json"
     existing_findings = read_json(findings_path)
-
     if isinstance(existing_findings, list):
         existing_findings.extend(findings)
     else:
@@ -211,38 +251,33 @@ def run_agent_f(args):
     if findings:
         write_json(findings_path, existing_findings)
 
-    # C. Update Context Packet (The "Case File")
     context = read_json(context_path)
     context["tax_validation"] = validation_result
     write_json(context_path, context)
 
     print(f"[Agent F] Complete. Findings: {len(findings)}")
 
+    passed = len(findings) == 0
+
+    return {
+        "result_path": str(out_dir / "tax_validation_result.json"),
+        "context_path": str(context_path),
+        "findings_path": str(findings_path),
+        "status": validation_result["status"],
+        "passed": passed,
+        "finding_codes": [f["code"] for f in findings],
+    }
+
 
 if __name__ == "__main__":
-    # Auto-detect latest run if no args provided (Development Helper)
-    default_run_dir = None
-    try:
-        base_dir = Path(__file__).resolve().parent.parent
-        runs_dir = base_dir / "runs"
-        if runs_dir.exists():
-            # Sort by creation time to find the newest
-            all_runs = sorted([d for d in runs_dir.iterdir() if d.is_dir() and d.name.startswith("run_")],
-                              key=lambda x: x.stat().st_ctime)
-            if all_runs:
-                default_run_dir = str(all_runs[-1])
-    except Exception:
-        pass
-
     parser = argparse.ArgumentParser(description="Agent F: Compliance & Tax Validation")
-    parser.add_argument("--run-dir", default=default_run_dir, help="Path to the specific run directory")
-
-    args = parser.parse_args()
-
-    if not args.run_dir:
-        print("❌ Error: No run directory provided and none could be auto-detected.")
-    else:
-        try:
-            run_agent_f(args)
-        except Exception as e:
-            print(f"❌ Error: {e}")
+    parser.add_argument("--bundle-dir", required=True)
+    parser.add_argument("--extracted-invoice", default=None)
+    parser.add_argument("--vendor-resolution", default=None)
+    parser.add_argument("--vendor-master", default=None)
+    parser.add_argument("--tax-rules", default=None)
+    parser.add_argument("--policy", default=None)
+    parser.add_argument("--run-dir", default=None)
+    parser.add_argument("--out-dir", default=None)
+    result = run_agent_f(parser.parse_args())
+    print(json.dumps(result, indent=2))
