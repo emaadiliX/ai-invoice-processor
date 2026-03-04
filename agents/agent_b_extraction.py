@@ -300,7 +300,7 @@ if __name__ == "__main__":
     parser.add_argument("--run-dir", default=None, help="Optional path to an existing run directory")
     args = parser.parse_args()
 
-    if not os.path.isdir(bundle_dir):
+    if not os.path.isdir(args.bundle_dir):
         print(f"Bundle not found: {args.bundle_dir}")
         sys.exit(1)
 
