@@ -193,7 +193,7 @@ def check_near_limit(invoice: dict, policy: dict) -> list[dict]:
     near_threshold = senior_limit * (near_pct / 100)
 
     total = invoice.get("total_amount") or 0.0
-    if total >= near_threshold:
+    if near_threshold <= total < senior_limit:
         return [make_finding(
             "NEAR_APPROVAL_LIMIT", "MEDIUM",
             f"Invoice total ({total}) is within {100 - near_pct:.0f}% of the senior "
