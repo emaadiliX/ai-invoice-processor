@@ -283,27 +283,26 @@ def run_extraction(bundle_path, run_dir=None):
     if extracted.get("low_confidence_fields"):
         print(f"Low confidence fields: {extracted['low_confidence_fields']}")
 
-    return output_path
+    return {
+        "result_path": output_path,
+        "context_path": None,
+        "finding_path": None,
+        "scenario_id": scenario_id,
+        "low_confidence_fields": extracted.get("low_confidence_fields", []),
+    }
 
 
 if __name__ == "__main__":
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    import argparse
 
-    bundle = sys.argv[1] if len(sys.argv) > 1 else os.path.join(project_root, "input_bundles", "s01")
+    parser = argparse.ArgumentParser(description="Agent B: OCR & Extraction")
+    parser.add_argument("--bundle-dir", required=True, help="Path to the input bundle directory")
+    parser.add_argument("--run-dir", default=None, help="Optional path to an existing run directory")
+    args = parser.parse_args()
 
-    if not os.path.isdir(bundle):
-        print(f"Bundle not found: {bundle}")
+    if not os.path.isdir(bundle_dir):
+        print(f"Bundle not found: {args.bundle_dir}")
         sys.exit(1)
 
-    output = run_extraction(bundle)
-
-    with open(output, "r") as f:
-        result = json.load(f)
-
-    print("\nExtracted fields:")
-    for field in ["invoice_id", "invoice_date", "due_date", "vendor_name", "vendor_id",
-                   "po_reference", "currency", "subtotal", "tax_amount", "total_amount"]:
-        print(f"  {field}: {result.get(field)}")
-
-    print(f"\nLine items: {len(result.get('line_items', []))}")
-    print(f"Low confidence: {result.get('low_confidence_fields', [])}")
+    result = run_extraction(args.bundle_dir, run_dir=args.run_dir)
+    print(json.dumps(result, indent=2))
