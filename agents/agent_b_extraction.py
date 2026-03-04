@@ -286,7 +286,7 @@ def run_extraction(bundle_path, run_dir=None):
     return {
         "result_path": output_path,
         "context_path": None,
-        "finding_path": None,
+        "findings_path": None,
         "scenario_id": scenario_id,
         "low_confidence_fields": extracted.get("low_confidence_fields", []),
     }
