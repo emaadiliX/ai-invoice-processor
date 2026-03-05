@@ -47,6 +47,7 @@ def resolve_extraction(bundle_dir: Path, run_dir: Path | None, explicit: str | N
 def resolve_vendor_master(bundle_dir: Path, manifest: dict, explicit: str | None):
     return find_first_existing([
         Path(explicit).resolve() if explicit else None,
+        (bundle_dir / "vendor_master.json").resolve(),
         (bundle_dir / manifest.get("vendor_master_file", "")).resolve() if manifest.get("vendor_master_file") else None,
         (bundle_dir.parent / "shared" / "vendor_master.json").resolve(),
         (bundle_dir.parent / "vendor_master.json").resolve(),
@@ -56,6 +57,7 @@ def resolve_vendor_master(bundle_dir: Path, manifest: dict, explicit: str | None
 def resolve_tax_rules(bundle_dir: Path, manifest: dict, explicit: str | None):
     return find_first_existing([
         Path(explicit).resolve() if explicit else None,
+        (bundle_dir / "tax_rules.yaml").resolve(),
         (bundle_dir / manifest.get("tax_rules_file", "")).resolve() if manifest.get("tax_rules_file") else None,
         (bundle_dir.parent / "shared" / "tax_rules.yaml").resolve(),
     ])
