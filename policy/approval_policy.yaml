@@ -3,8 +3,8 @@ tolerance:
   quantity_variance_pct: 1.0
 
 thresholds:
-  auto_approve_below: 500
-  senior_approval_above: 10000
+  auto_approve_below: 25000.00
+  senior_approval_above: 50000.00
 
 compliance:
   require_po_for_invoices_above: 1000

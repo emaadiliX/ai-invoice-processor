@@ -41,8 +41,8 @@ def get_manifest(bundle_dir: Path):
 def resolve_extraction(bundle_dir, explicit):
     return find_first_existing([
         Path(explicit).resolve() if explicit else None,
-        (bundle_dir / "extracted_invoice.json").resolve(),
         (bundle_dir / "mock_extraction.json").resolve(),
+        (bundle_dir / "extracted_invoice.json").resolve(),
     ])
 
 

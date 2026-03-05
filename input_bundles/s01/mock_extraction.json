@@ -10,14 +10,14 @@
     {
       "line_id": 1,
       "description": "Standing Desks",
-      "quantity": 32,
+      "quantity": 40,
       "unit_price": 250.00,
-      "total": 8000.00
+      "total": 10000.00
     }
   ],
-  "subtotal": 8000.00,
-  "tax_amount": 800.00,
-  "total_amount": 8800.00,
+  "subtotal": 10000.00,
+  "tax_amount": 1000.00,
+  "total_amount": 11000.00,
   "confidence_scores": {
     "invoice_id": 0.98,
     "invoice_date": 0.98,

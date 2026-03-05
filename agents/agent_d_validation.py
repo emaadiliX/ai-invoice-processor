@@ -55,9 +55,9 @@ def resolve_policy(bundle_dir: Path, manifest: dict, explicit: str | None):
 def resolve_extraction(bundle_dir: Path, run_dir: Path | None, explicit: str | None):
     return find_first_existing([
         Path(explicit).resolve() if explicit else None,
-        (run_dir / "extracted_invoice.json").resolve() if run_dir else None,
-        (bundle_dir / "extracted_invoice.json").resolve(),
         (bundle_dir / "mock_extraction.json").resolve(),
+        (bundle_dir / "extracted_invoice.json").resolve(),
+        (run_dir / "extracted_invoice.json").resolve() if run_dir else None,
     ])
 
 
@@ -244,6 +244,17 @@ def check_credit_note(invoice: dict) -> list[dict]:
     return []
 
 
+def check_ocr_confidence(invoice: dict) -> list[dict]:
+    low_conf = invoice.get("low_confidence_fields", [])
+    if low_conf:
+        return [make_finding(
+            "LOW_OCR_CONFIDENCE", "MEDIUM",
+            f"Low confidence detected in fields: {', '.join(low_conf)}",
+            {"fields": low_conf},
+            "manual_verification"
+        )]
+    return []
+
 #orchestrate all checks 
 
 def validate_invoice(invoice: dict, policy: dict, schema_path: Path | None) -> list[dict]:
@@ -256,8 +267,8 @@ def validate_invoice(invoice: dict, policy: dict, schema_path: Path | None) -> l
     findings.extend(check_header_total(invoice))
     findings.extend(check_po_required(invoice, policy))
     findings.extend(check_credit_note(invoice))
+    findings.extend(check_ocr_confidence(invoice))
     return findings
-
 
 #output writers (mirrors Agent C)
 

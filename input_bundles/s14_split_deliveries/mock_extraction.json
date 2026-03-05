@@ -1,23 +1,23 @@
 {
-  "invoice_id": "INV-2026-015",
-  "invoice_date": "2026-01-10",
-  "due_date": "2026-01-25",
+  "invoice_id": "INV-TEST-0014",
+  "invoice_date": "2025-04-20",
+  "due_date": "2025-05-20",
   "vendor_name": "Apex Office Supplies Ltd",
   "vendor_id": "V-101",
-  "po_reference": "PO-0015",
+  "po_reference": "TEST-PO-0014",
   "currency": "USD",
   "line_items": [
     {
       "line_id": 1,
-      "description": "Printer Paper (Box)",
-      "quantity": 10,
-      "unit_price": 12.00,
-      "total": 120.00
+      "description": "Storage Units",
+      "quantity": 200,
+      "unit_price": 75.00,
+      "total": 15000.00
     }
   ],
-  "subtotal": 120.00,
-  "tax_amount": 8.40,
-  "total_amount": 128.40,
+  "subtotal": 15000.00,
+  "tax_amount": 1050.00,
+  "total_amount": 16050.00,
   "confidence_scores": {
     "invoice_id": 0.99,
     "invoice_date": 0.99,
@@ -33,5 +33,5 @@
     "total_amount": 0.99
   },
   "low_confidence_fields": [],
-  "extraction_notes": "Clean small invoice, perfect extraction quality."
+  "extraction_notes": "Synthetic extraction for split-delivery test; clean 3-way match expected."
 }

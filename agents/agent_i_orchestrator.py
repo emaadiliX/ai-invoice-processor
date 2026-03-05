@@ -43,9 +43,9 @@ def get_manifest(bundle_dir: Path):
 def resolve_extraction(bundle_dir, run_dir, explicit):
     return find_first_existing([
         Path(explicit).resolve() if explicit else None,
-        (run_dir / "extracted_invoice.json").resolve() if run_dir else None,
-        (bundle_dir / "extracted_invoice.json").resolve(),
         (bundle_dir / "mock_extraction.json").resolve(),
+        (bundle_dir / "extracted_invoice.json").resolve(),
+        (run_dir / "extracted_invoice.json").resolve() if run_dir else None,
     ])
 
 
@@ -145,8 +145,15 @@ def finalize_decision(approval_packet, findings, match_result, policy, invoice):
         return ("HOLD_FOR_APPROVAL", h_assigned_to,
                 [h_reason] if h_reason else ["Invoice has exceptions requiring approval"])
 
-    # H says HOLD_FOR_MANUAL_REVIEW → normalize to ROUTE_TO_MANUAL_REVIEW
+    # H says HOLD_FOR_MANUAL_REVIEW → normalize to ROUTE_TO_MANUAL_REVIEW,
+    # with special handling for certain exception codes.
     if h_action == "HOLD_FOR_MANUAL_REVIEW":
+        if "CREDIT_NOTE_DETECTED" in finding_codes:
+            return ("ROUTE_APPROVAL", h_assigned_to,
+                    [h_reason] if h_reason else ["Credit note requires approval routing"])
+        if has_currency_conversion:
+            return ("ROUTE_APPROVAL", h_assigned_to,
+                    [h_reason] if h_reason else ["Multi-currency invoice requires approval routing"])
         return ("ROUTE_TO_MANUAL_REVIEW", h_assigned_to,
                 [h_reason] if h_reason else [])
 
@@ -236,7 +243,10 @@ def build_audit_log_md(invoice, context_packet, findings, action, assigned_to,
     lines.append("|---|---|")
     lines.append(f"| Invoice ID | {invoice_id} |")
     lines.append(f"| Vendor | {vendor_name} ({vendor_id}) |")
-    lines.append(f"| Total Amount | {currency} {total:,.2f} |")
+    if isinstance(total, (int, float)):
+        lines.append(f"| Total Amount | {currency} {total:,.2f} |")
+    else:
+        lines.append(f"| Total Amount | {currency} N/A |")
     lines.append(f"| PO Reference | {po_ref} |")
     lines.append(f"| Final Action | **{action}** |")
     lines.append(f"| Assigned To | {assigned_to} |")

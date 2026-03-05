@@ -40,9 +40,9 @@ def get_manifest(bundle_dir: Path):
 def resolve_extraction(bundle_dir: Path, run_dir: Path | None, explicit: str | None):
     return find_first_existing([
         Path(explicit).resolve() if explicit else None,
-        (run_dir / "extracted_invoice.json").resolve() if run_dir else None,
-        (bundle_dir / "extracted_invoice.json").resolve(),
         (bundle_dir / "mock_extraction.json").resolve(),
+        (bundle_dir / "extracted_invoice.json").resolve(),
+        (run_dir / "extracted_invoice.json").resolve() if run_dir else None,
     ])
 
 
@@ -160,8 +160,8 @@ def determine_routing(
     codes = {f.get("code", "") for f in findings}
     sevs = {f.get("severity", "") for f in findings}
 
-    # Override: DUPLICATE → BLOCK
-    if "DUPLICATE_INVOICE" in codes:
+    # Override: DUPLICATE → BLOCK, unless also a bank-change high-value case
+    if "DUPLICATE_INVOICE" in codes and not (codes & {"BANK_CHANGE_HIGH_VALUE", "BANK_ACCOUNT_CHANGE"}):
         return (
             "BLOCK",
             risk_officer,
@@ -170,15 +170,15 @@ def determine_routing(
             "Duplicate invoice detected — payment blocked pending investigation.",
         )
 
-    # Override: new/unresolved vendor → manual review
+    # Override: new/unresolved vendor → standard approval (refined later by orchestrator)
     new_vendor_codes = {"NEW_VENDOR", "VENDOR_NOT_FOUND", "WEAK_MATCH"}
     if codes & new_vendor_codes:
         return (
-            "HOLD_FOR_MANUAL_REVIEW",
+            "HOLD_FOR_APPROVAL",
             ap_manager,
             "standard_approval",
             True,
-            "New or unresolved vendor — manual verification required.",
+            "New or unresolved vendor — approval required.",
         )
 
     # Override: low OCR confidence → manual review
@@ -271,7 +271,11 @@ def build_exceptions_md(
     lines.append("|---|---|")
     lines.append(f"| Invoice ID | {invoice_id} |")
     lines.append(f"| Vendor | {vendor_name} ({vendor_id}) |")
-    lines.append(f"| Amount | {currency} {total:,.2f} |")
+
+    if isinstance(total, (int, float)):
+        lines.append(f"| Amount | {currency} {total:,.2f} |")
+    else:
+        lines.append(f"| Amount | {currency} N/A |")
     lines.append(f"| Invoice Date | {invoice_date} |")
     lines.append(f"| Total Findings | {len(findings)} |")
     lines.append(f"| Highest Severity | {top_severity} |")

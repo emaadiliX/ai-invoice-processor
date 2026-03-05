@@ -38,15 +38,17 @@ def get_manifest(bundle_dir: Path):
 
 
 def resolve_vendor_master(bundle_dir: Path, manifest: dict, explicit: str | None):
+    # FIXED: Added (bundle_dir / "vendor_master.json") to candidates
     candidates = [
         Path(explicit).resolve() if explicit else None,
+        (bundle_dir / "vendor_master.json").resolve(),  # <--- NEW: Check run dir first
         (bundle_dir / manifest.get("vendor_master_file", "")).resolve() if manifest.get("vendor_master_file") else None,
         (bundle_dir.parent / "shared" / "vendor_master.json").resolve(),
         (bundle_dir.parent / "vendor_master.json").resolve(),
     ]
     path = find_first_existing(candidates)
     if not path:
-        raise FileNotFoundError("Vendor master file not found.")
+        raise FileNotFoundError(f"Vendor master file not found. Searched: {[str(c) for c in candidates if c]}")
     return path
 
 
@@ -65,8 +67,8 @@ def resolve_extraction(bundle_dir: Path, explicit: str | None):
     return find_first_existing(
         [
             Path(explicit).resolve() if explicit else None,
-            (bundle_dir / "extracted_invoice.json").resolve(),
             (bundle_dir / "mock_extraction.json").resolve(),
+            (bundle_dir / "extracted_invoice.json").resolve(),
         ]
     )
 
