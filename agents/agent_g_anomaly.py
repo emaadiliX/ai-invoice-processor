@@ -95,13 +95,15 @@ def get_field(doc: dict, key: str):
 
 # ── detection 1: duplicate invoice ───────────────────────────────────────────
 
-def collect_history(history_dir: Path, lookback_days: int) -> list[dict]:
+def collect_history(history_dir: Path, lookback_days: int, exclude_dir: Path | None = None) -> list[dict]:
     """Recursively scan history_dir for extracted_invoice.json files within the lookback window."""
     if not history_dir or not history_dir.exists():
         return []
     cutoff = date.today() - timedelta(days=lookback_days)
     results = []
     for history_file in history_dir.rglob("extracted_invoice.json"):
+        if exclude_dir and history_file.resolve().is_relative_to(exclude_dir.resolve()):
+            continue  # skip the current run's own file
         try:
             doc = read_json(history_file)
             inv_date_raw = doc.get("invoice_date")
@@ -118,14 +120,14 @@ def collect_history(history_dir: Path, lookback_days: int) -> list[dict]:
     return results
 
 
-def check_duplicate(invoice: dict, history_dir: Path | None, policy: dict) -> list[dict]:
+def check_duplicate(invoice: dict, history_dir: Path | None, policy: dict, run_dir: Path | None = None) -> list[dict]:
     dup_config = policy.get("duplicate") or {}
     lookback_days = int(dup_config.get("lookback_days", 90))
     match_keys = dup_config.get("match_keys") or [
         "vendor_id", "invoice_number", "invoice_date", "total_amount"
     ]
 
-    for entry in collect_history(history_dir, lookback_days):
+    for entry in collect_history(history_dir, lookback_days, exclude_dir=run_dir):
         prior = entry["doc"]
         if all(get_field(invoice, k) == get_field(prior, k) for k in match_keys):
             return [make_finding(
@@ -211,9 +213,9 @@ def check_near_limit(invoice: dict, policy: dict) -> list[dict]:
 # ── orchestrate all checks ────────────────────────────────────────────────────
 
 def detect_anomalies(invoice: dict, vendor_master: list, policy: dict,
-                     history_dir: Path | None) -> list[dict]:
+                     history_dir: Path | None, run_dir: Path | None = None) -> list[dict]:
     findings = []
-    findings.extend(check_duplicate(invoice, history_dir, policy))
+    findings.extend(check_duplicate(invoice, history_dir, policy, run_dir=run_dir))
     findings.extend(check_bank_change(invoice, vendor_master, policy))
     findings.extend(check_near_limit(invoice, policy))
     return findings
@@ -254,6 +256,7 @@ def run_agent_g(args):
     history_dir = Path(args.history_dir).resolve() if args.history_dir else None
     manifest = get_manifest(bundle_dir)
 
+
     extraction_path = resolve_extraction(bundle_dir, run_dir, args.extracted_invoice)
     if not extraction_path:
         raise FileNotFoundError("No extracted_invoice.json or mock_extraction.json found.")
@@ -265,7 +268,7 @@ def run_agent_g(args):
     vendor_master_path = resolve_vendor_master(bundle_dir, manifest, args.vendor_master)
     vendor_master = read_json(vendor_master_path) if vendor_master_path else []
 
-    findings = detect_anomalies(invoice, vendor_master, policy, history_dir)
+    findings = detect_anomalies(invoice, vendor_master, policy, history_dir, run_dir=run_dir)
 
     critical = [f for f in findings if f["severity"] == "CRITICAL"]
     high = [f for f in findings if f["severity"] == "HIGH"]
