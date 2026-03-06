@@ -1,6 +1,6 @@
 {
   "grn_id": "TEST-GRN-0015",
-  "po_reference": "TEST-PO-0015",
+  "po_reference": "PO-0015",
   "received_by": "WAREHOUSE_DEPT",
   "receipt_date": "2024-04-19",
   "line_items": [
