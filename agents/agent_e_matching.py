@@ -357,6 +357,13 @@ def perform_matching(invoice, po, grn_list, tolerances, exchange_rates):
             "line_status": "MATCH" if line_ok else "MISMATCH",
         })
 
+    if match_type == "2WAY":
+        findings.append(make_finding(
+            "NO_GRN", "MEDIUM",
+            "No Goods Receipt Note available — only 2-way match performed. GRN required for auto-post.",
+            {"match_type": "2WAY", "po_id": po_id},
+        ))
+
     if any_mismatch:
         bad = sum(1 for r in line_results if r["line_status"] == "MISMATCH")
         overall = "MISMATCH" if bad == len(line_results) else "PARTIAL_MATCH"

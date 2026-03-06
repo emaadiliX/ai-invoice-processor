@@ -1,8 +1,12 @@
-scenario_id: "s01_clean_match"
-description: "Clean invoice with perfect PO + GRN match. Should auto-post."
+scenario_id: "s02_no_grn"
+description: "Invoice references PO but no GRN exists. Tests 2-way match only — missing goods receipt routes to HOLD_FOR_APPROVAL."
 invoice_file: "invoice.pdf"
-purchase_order_file: "purchase_order.json.txt"
-grn_file: "grn.json.txt"
+purchase_order_file: "purchase_order.json"
+grn_file: null
+vendor_master_file: "../shared/vendor_master.json"
+tax_rules_file: "../shared/tax_rules.yaml"
+approval_policy_file: "../shared/approval_policy.yaml"
 currency: "USD"
-expected_outcome: "AUTO_POST"
-expected_exceptions: []
+expected_outcome: "HOLD_FOR_APPROVAL"
+expected_exceptions:
+  - "NO_GRN"
