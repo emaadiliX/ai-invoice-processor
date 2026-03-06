@@ -2,6 +2,7 @@ import sys
 import json
 import io
 from pathlib import Path
+import shutil
 from contextlib import redirect_stdout, redirect_stderr
 
 # Import the pipeline logic from run.py to ensure identical execution
@@ -101,6 +102,13 @@ def print_row(scenario, expected, actual, status):
 
 
 def main():
+
+    runs_path = Path("runs")
+    if runs_path.exists():
+        print("Cleaning up previous runs...")
+        shutil.rmtree(runs_path)
+    runs_path.mkdir(exist_ok=True)
+
     print("\nIIPS Demo Results")
     print("═" * 75)
     print(f"{'Scenario'.ljust(30)} {'Expected'.ljust(25)} {'Actual'.ljust(25)} PASS/FAIL")
