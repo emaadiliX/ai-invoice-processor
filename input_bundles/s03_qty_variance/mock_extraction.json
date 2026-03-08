@@ -1,0 +1,37 @@
+{
+  "invoice_id": "INV-2024-003",
+  "invoice_date": "2024-03-20",
+  "due_date": "2024-04-19",
+  "vendor_name": "Apex Office Supplies Ltd",
+  "vendor_id": "V-101",
+  "po_reference": "TEST-PO-0003",
+  "currency": "USD",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Office Chairs",
+      "quantity": 120,
+      "unit_price": 150.00,
+      "total": 18000.00
+    }
+  ],
+  "subtotal": 18000.00,
+  "tax_amount": 1260.00,
+  "total_amount": 19260.00,
+  "confidence_scores": {
+    "invoice_id": 0.98,
+    "invoice_date": 0.98,
+    "due_date": 0.98,
+    "vendor_name": 0.99,
+    "po_reference": 0.98,
+    "currency": 0.99,
+    "line_item_description": 0.98,
+    "line_item_quantity": 0.98,
+    "line_item_unit_price": 0.98,
+    "subtotal": 0.98,
+    "tax_amount": 0.98,
+    "total_amount": 0.98
+  },
+  "low_confidence_fields": [],
+  "extraction_notes": "Synthetic extraction for quantity variance test. Invoice qty 120 exceeds PO qty 100 — triggers QUANTITY_VARIANCE finding."
+}
