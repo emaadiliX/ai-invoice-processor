@@ -6,6 +6,8 @@ import shutil
 import uuid
 from pathlib import Path
 
+import yaml
+
 
 
 def write_json(path: Path, payload):
@@ -30,6 +32,54 @@ def classify_file(filename: str) -> str:
         return "tax_rules"
     else:
         return "unknown_file"
+
+
+def _extract_json_fields(obj, prefix="$", depth=0, max_depth=2) -> dict:
+    """Recursively extract scalar fields with JSON-path notation, up to max_depth."""
+    fields = {}
+    if depth > max_depth:
+        return fields
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            path = f"{prefix}.{k}"
+            if isinstance(v, (str, int, float, bool)) or v is None:
+                fields[path] = v
+            elif isinstance(v, list):
+                fields[f"{path}[]"] = f"array({len(v)} items)"
+                if v and isinstance(v[0], dict) and depth < max_depth:
+                    for sub_k, sub_v in v[0].items():
+                        sub_path = f"{path}[0].{sub_k}"
+                        if isinstance(sub_v, (str, int, float, bool)) or sub_v is None:
+                            fields[sub_path] = sub_v
+            elif isinstance(v, dict) and depth < max_depth:
+                fields.update(_extract_json_fields(v, prefix=path, depth=depth + 1, max_depth=max_depth))
+    return fields
+
+
+def build_evidence_index_entry(file_path: Path, file_type: str, source: str) -> dict:
+    """Build an evidence index entry describing key fields and their locations in a file."""
+    entry = {"file_type": file_type, "source": source, "fields": {}}
+
+    suffix = file_path.suffix.lower()
+    if suffix == ".json":
+        try:
+            content = json.loads(file_path.read_text(encoding="utf-8"))
+            entry["fields"] = _extract_json_fields(content)
+        except Exception as e:
+            entry["note"] = f"Could not parse JSON: {e}"
+    elif suffix in (".yaml", ".yml"):
+        try:
+            content = yaml.safe_load(file_path.read_text(encoding="utf-8"))
+            if isinstance(content, dict):
+                entry["fields"] = _extract_json_fields(content)
+        except Exception as e:
+            entry["note"] = f"Could not parse YAML: {e}"
+    elif suffix in (".pdf", ".png", ".jpg", ".jpeg"):
+        entry["note"] = "Binary document — field extraction performed by Agent B (OCR)"
+    else:
+        entry["note"] = "Non-structured file — no field extraction"
+
+    return entry
 
 
 def extract_metadata_candidates(file_path: Path) -> dict:
@@ -83,6 +133,7 @@ def run_agent_a(args):
         "timestamp": datetime.datetime.now().isoformat(),
         "status": "intake_complete",
         "files": [],
+        "evidence_index": {},
         "metadata_candidates": {
             "vendor_ids": [],
             "po_refs": []
@@ -103,16 +154,18 @@ def run_agent_a(args):
                 shutil.copy2(item, dest_path)
 
                 # Metadata & Context
+                file_type = classify_file(item.name)
                 meta = extract_metadata_candidates(item)
                 context_packet["metadata_candidates"]["vendor_ids"].extend(meta["potential_vendor_ids"])
                 context_packet["metadata_candidates"]["po_refs"].extend(meta["potential_po_refs"])
 
                 context_packet["files"].append({
                     "filename": item.name,
-                    "type": classify_file(item.name),
+                    "type": file_type,
                     "source": "shared",
                     "path": str(dest_path)
                 })
+                context_packet["evidence_index"][item.name] = build_evidence_index_entry(item, file_type, "shared")
     else:
         print(f"   [Warning] Shared directory not found: {shared_dir}")
 
@@ -125,16 +178,18 @@ def run_agent_a(args):
                 shutil.copy2(item, dest_path)
 
                 # Metadata & Context
+                file_type = classify_file(item.name)
                 meta = extract_metadata_candidates(item)
                 context_packet["metadata_candidates"]["vendor_ids"].extend(meta["potential_vendor_ids"])
                 context_packet["metadata_candidates"]["po_refs"].extend(meta["potential_po_refs"])
 
                 context_packet["files"].append({
                     "filename": item.name,
-                    "type": classify_file(item.name),
+                    "type": file_type,
                     "source": "input_bundle",
                     "path": str(dest_path)
                 })
+                context_packet["evidence_index"][item.name] = build_evidence_index_entry(item, file_type, "input_bundle")
     else:
         raise FileNotFoundError(f"Input bundle not found: {bundle_dir}")
 

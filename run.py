@@ -10,11 +10,11 @@ from pathlib import Path
 # Import helper functions from Agent A to resolve directory conflict
 # (Assumes agents/ directory is in python path or relative)
 try:
-    from agents.agent_a_intake import classify_file, extract_metadata_candidates
+    from agents.agent_a_intake import classify_file, extract_metadata_candidates, build_evidence_index_entry
 except ImportError:
     # Fallback if running from root without package install
     sys.path.append(str(Path(__file__).parent / "agents"))
-    from agents.agent_a_intake import classify_file, extract_metadata_candidates
+    from agents.agent_a_intake import classify_file, extract_metadata_candidates, build_evidence_index_entry
 
 
 def setup_run_directory(bundle_path: Path, runs_root: Path) -> Path:
@@ -61,6 +61,7 @@ def execute_agent_a_logic(run_dir: Path, run_id: Path, original_bundle_path: Pat
         "timestamp": datetime.datetime.now().isoformat(),
         "status": "intake_complete",
         "files": [],
+        "evidence_index": {},
         "metadata_candidates": {
             "vendor_ids": [],
             "po_refs": []
@@ -89,6 +90,8 @@ def execute_agent_a_logic(run_dir: Path, run_id: Path, original_bundle_path: Pat
                 "source": "run_dir_aggregated",
                 "path": str(item.resolve())
             })
+            context_packet["evidence_index"][item.name] = build_evidence_index_entry(item, file_type, "run_dir_aggregated")
+            context_packet["evidence_index"][item.name] = build_evidence_index_entry(item, file_type, "run_dir_aggregated")
 
     # Deduplicate metadata
     context_packet["metadata_candidates"]["vendor_ids"] = list(set(context_packet["metadata_candidates"]["vendor_ids"]))
