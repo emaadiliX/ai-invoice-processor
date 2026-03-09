@@ -82,6 +82,51 @@ def build_evidence_index_entry(file_path: Path, file_type: str, source: str) -> 
     return entry
 
 
+IGNORED_FILES = {".gitignore", ".DS_Store", "thumbs.db"}
+IGNORED_SUFFIXES = {".pyc", ".pyo", ".log"}
+
+
+def _should_ignore(filename: str) -> bool:
+    return filename.lower() in IGNORED_FILES or Path(filename).suffix.lower() in IGNORED_SUFFIXES
+
+
+def compute_risk_indicators(files: list, vendor_ids: list, run_dir: Path) -> list:
+    """Derive early-warning risk flags from the file manifest and known vendor master."""
+    indicators = []
+    file_types = {f["type"] for f in files}
+
+    if "purchase_order_data" not in file_types:
+        indicators.append({
+            "code": "MISSING_PO_REFERENCE",
+            "severity": "HIGH",
+            "detail": "No purchase order file found in bundle — invoice cannot be matched to a PO."
+        })
+
+    if "goods_receipt_data" not in file_types:
+        indicators.append({
+            "code": "NO_GRN_PRESENT",
+            "severity": "MEDIUM",
+            "detail": "No Goods Receipt Note found — 3-way match not possible; 2-way match only."
+        })
+
+    vendor_master_path = run_dir / "vendor_master.json"
+    if vendor_ids and vendor_master_path.exists():
+        try:
+            master = json.loads(vendor_master_path.read_text(encoding="utf-8"))
+            known_ids = {v.get("vendor_id") for v in master}
+            unknown = [vid for vid in vendor_ids if vid not in known_ids]
+            if unknown:
+                indicators.append({
+                    "code": "NEW_VENDOR_RISK",
+                    "severity": "HIGH",
+                    "detail": f"Vendor ID(s) not found in master: {unknown}. Requires vendor onboarding check."
+                })
+        except Exception:
+            pass
+
+    return indicators
+
+
 def extract_metadata_candidates(file_path: Path) -> dict:
     """Scans text files (JSON/YAML) for potential ID references."""
     candidates = {
@@ -134,6 +179,7 @@ def run_agent_a(args):
         "status": "intake_complete",
         "files": [],
         "evidence_index": {},
+        "risk_indicators": [],
         "metadata_candidates": {
             "vendor_ids": [],
             "po_refs": []
@@ -148,7 +194,7 @@ def run_agent_a(args):
     # 3. Process Shared Files
     if shared_dir.exists():
         for item in shared_dir.iterdir():
-            if item.is_file():
+            if item.is_file() and not _should_ignore(item.name):
                 # Copy file
                 dest_path = run_dir / item.name
                 shutil.copy2(item, dest_path)
@@ -172,7 +218,7 @@ def run_agent_a(args):
     # 4. Process Input Bundle
     if bundle_dir.exists():
         for item in bundle_dir.iterdir():
-            if item.is_file():
+            if item.is_file() and not _should_ignore(item.name):
                 # Copy file
                 dest_path = run_dir / item.name
                 shutil.copy2(item, dest_path)
@@ -196,6 +242,9 @@ def run_agent_a(args):
     # 5. Deduplicate and Save
     context_packet["metadata_candidates"]["vendor_ids"] = list(set(context_packet["metadata_candidates"]["vendor_ids"]))
     context_packet["metadata_candidates"]["po_refs"] = list(set(context_packet["metadata_candidates"]["po_refs"]))
+    context_packet["risk_indicators"] = compute_risk_indicators(
+        context_packet["files"], context_packet["metadata_candidates"]["vendor_ids"], run_dir
+    )
 
     out_path = run_dir / "context_packet.json"
     write_json(out_path, context_packet)

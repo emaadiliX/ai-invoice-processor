@@ -10,11 +10,11 @@ from pathlib import Path
 # Import helper functions from Agent A to resolve directory conflict
 # (Assumes agents/ directory is in python path or relative)
 try:
-    from agents.agent_a_intake import classify_file, extract_metadata_candidates, build_evidence_index_entry
+    from agents.agent_a_intake import classify_file, extract_metadata_candidates, build_evidence_index_entry, compute_risk_indicators, _should_ignore
 except ImportError:
     # Fallback if running from root without package install
     sys.path.append(str(Path(__file__).parent / "agents"))
-    from agents.agent_a_intake import classify_file, extract_metadata_candidates, build_evidence_index_entry
+    from agents.agent_a_intake import classify_file, extract_metadata_candidates, build_evidence_index_entry, compute_risk_indicators, _should_ignore
 
 
 def setup_run_directory(bundle_path: Path, runs_root: Path) -> Path:
@@ -62,6 +62,7 @@ def execute_agent_a_logic(run_dir: Path, run_id: Path, original_bundle_path: Pat
         "status": "intake_complete",
         "files": [],
         "evidence_index": {},
+        "risk_indicators": [],
         "metadata_candidates": {
             "vendor_ids": [],
             "po_refs": []
@@ -75,7 +76,7 @@ def execute_agent_a_logic(run_dir: Path, run_id: Path, original_bundle_path: Pat
 
     # Scan the populated run_dir to build context
     for item in run_dir.iterdir():
-        if item.is_file():
+        if item.is_file() and not _should_ignore(item.name):
             # Classify
             file_type = classify_file(item.name)
 
@@ -91,11 +92,13 @@ def execute_agent_a_logic(run_dir: Path, run_id: Path, original_bundle_path: Pat
                 "path": str(item.resolve())
             })
             context_packet["evidence_index"][item.name] = build_evidence_index_entry(item, file_type, "run_dir_aggregated")
-            context_packet["evidence_index"][item.name] = build_evidence_index_entry(item, file_type, "run_dir_aggregated")
 
     # Deduplicate metadata
     context_packet["metadata_candidates"]["vendor_ids"] = list(set(context_packet["metadata_candidates"]["vendor_ids"]))
     context_packet["metadata_candidates"]["po_refs"] = list(set(context_packet["metadata_candidates"]["po_refs"]))
+    context_packet["risk_indicators"] = compute_risk_indicators(
+        context_packet["files"], context_packet["metadata_candidates"]["vendor_ids"], run_dir
+    )
 
     # Save Context Packet
     out_path = run_dir / "context_packet.json"
