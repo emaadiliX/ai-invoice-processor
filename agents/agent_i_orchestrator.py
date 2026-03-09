@@ -103,10 +103,7 @@ def sort_findings(findings):
 # Decision finalization
 
 def finalize_decision(approval_packet, findings, match_result, policy, invoice):
-    """
-    Refine Agent H's routing recommendation using match_result, finding codes,
-    and invoice data. Returns (action, assigned_to, hold_reasons).
-    """
+    """Decide the final action based on H's recommendation, findings, and invoice data."""
     h_action = approval_packet.get("recommended_action", "HOLD_FOR_APPROVAL")
     h_assigned_to = approval_packet.get("assigned_to", "ap_manager")
     h_reason = approval_packet.get("approval_reason", "")
@@ -121,49 +118,48 @@ def finalize_decision(approval_packet, findings, match_result, policy, invoice):
     is_clean = len(findings) == 0
     finding_codes = {f.get("code") for f in findings}
 
-    # H says AUTO_APPROVE → finalize for ERP posting (or route if multi-currency)
+    # AUTO_APPROVE: post to ERP, or route if multi-currency
     if h_action == "AUTO_APPROVE":
         if has_currency_conversion:
             return ("ROUTE_APPROVAL", h_assigned_to,
                     ["Multi-currency invoice requires approval routing"])
         return ("AUTO_POST", ap_bot, [])
 
-    # H says HOLD_FOR_APPROVAL → check if I can refine
+    # HOLD_FOR_APPROVAL: try to refine the action
     if h_action == "HOLD_FOR_APPROVAL":
         if is_clean and is_full_match and not has_currency_conversion:
             return ("AUTO_POST", ap_bot, [])
         if "CREDIT_NOTE_DETECTED" in finding_codes:
             return ("ROUTE_APPROVAL", h_assigned_to,
-                    [h_reason] if h_reason else ["Credit note requires approval routing"])
+                    ["Credit note requires approval routing"])
         if has_currency_conversion:
             return ("ROUTE_APPROVAL", h_assigned_to,
-                    [h_reason] if h_reason else ["Multi-currency invoice requires approval routing"])
+                    ["Multi-currency invoice requires approval routing"])
         if not invoice.get("po_reference"):
             if "MISSING_PO_REFERENCE" in finding_codes or "NO_PO_MATCH" in finding_codes:
                 return ("ROUTE_TO_DEPT_HEAD", roles.get("dept_head", "dept_head"),
-                        [h_reason] if h_reason else ["No PO — requires department head approval"])
+                        ["No PO — requires department head approval"])
         return ("HOLD_FOR_APPROVAL", h_assigned_to,
                 [h_reason] if h_reason else ["Invoice has exceptions requiring approval"])
 
-    # H says HOLD_FOR_MANUAL_REVIEW → normalize to ROUTE_TO_MANUAL_REVIEW,
-    # with special handling for certain exception codes.
+    # HOLD_FOR_MANUAL_REVIEW: normalize action name, handle special codes
     if h_action == "HOLD_FOR_MANUAL_REVIEW":
         if "CREDIT_NOTE_DETECTED" in finding_codes:
             return ("ROUTE_APPROVAL", h_assigned_to,
-                    [h_reason] if h_reason else ["Credit note requires approval routing"])
+                    ["Credit note requires approval routing"])
         if has_currency_conversion:
             return ("ROUTE_APPROVAL", h_assigned_to,
-                    [h_reason] if h_reason else ["Multi-currency invoice requires approval routing"])
+                    ["Multi-currency invoice requires approval routing"])
         return ("ROUTE_TO_MANUAL_REVIEW", h_assigned_to,
                 [h_reason] if h_reason else [])
 
-    # H says ESCALATE_TO_RISK_OFFICER → reroute bank-change cases to finance
+    # ESCALATE_TO_RISK_OFFICER: reroute bank changes to finance
     if h_action == "ESCALATE_TO_RISK_OFFICER":
         bank_codes = {"BANK_CHANGE_HIGH_VALUE", "BANK_ACCOUNT_CHANGE"}
         if finding_codes & bank_codes:
             return ("ESCALATE_TO_FINANCE_APPROVER",
                     roles.get("senior_approval", "finance_controller"),
-                    [h_reason] if h_reason else ["Bank account change on high-value invoice"])
+                    ["Bank account change on high-value invoice"])
         return (h_action, h_assigned_to, [h_reason] if h_reason else [])
 
     # BLOCK and everything else: passthrough
@@ -174,7 +170,7 @@ def finalize_decision(approval_packet, findings, match_result, policy, invoice):
 
 def compute_determinism_hash(findings, invoice, match_result, vendor_resolution,
                              approval_packet, action):
-    """Hash all decision-relevant inputs so identical runs produce the same hash."""
+    """SHA-256 hash of all decision inputs for deterministic re-runs."""
     hash_input = {
         "finding_codes": sorted(f.get("code", "") for f in findings),
         "finding_severities": sorted(f.get("severity", "") for f in findings),
@@ -445,7 +441,7 @@ def run_agent_i(args):
     ) if args.out_dir else (run_dir or bundle_dir)
     manifest = get_manifest(bundle_dir)
 
-    # --- Load all inputs ---
+    # Load inputs
 
     # Extracted invoice (required)
     extraction_path = resolve_extraction(bundle_dir, run_dir, None)
@@ -504,24 +500,24 @@ def run_agent_i(args):
     policy_path = resolve_policy(bundle_dir, manifest, args.policy)
     policy = read_yaml(policy_path) if policy_path else {}
 
-    # --- Deduplicate and sort findings for determinism ---
+    # Deduplicate and sort findings
 
     findings = sort_findings(deduplicate_findings(findings_loaded))
 
-    # --- Finalize decision (builds on Agent H's recommendation) ---
+    # Finalize decision
 
     action, assigned_to, hold_reasons = finalize_decision(
         approval_packet, findings, match_result, policy, invoice,
     )
 
-    # --- Compute determinism hash ---
+    # Compute determinism hash
 
     determinism_hash = compute_determinism_hash(
         findings, invoice, match_result, vendor_resolution,
         approval_packet, action,
     )
 
-    # --- Collect evidence file paths ---
+    # Collect evidence paths
 
     evidence_files = [
         "extracted_invoice.json", "findings.json", "match_result.json",
@@ -539,7 +535,7 @@ def run_agent_i(args):
                 p = candidate
         evidence_paths[filename] = str(p) if p else "NOT_FOUND"
 
-    # --- Build orchestrator summary ---
+    # Build summary
 
     orchestrator_summary = {
         "invoice_id": invoice.get("invoice_id"),
@@ -552,7 +548,7 @@ def run_agent_i(args):
         "timestamp": datetime.now().isoformat(),
     }
 
-    # --- Build output artifacts ---
+    # Build outputs
 
     posting_payload = build_posting_payload(
         invoice, action, hold_reasons, assigned_to)
@@ -566,7 +562,7 @@ def run_agent_i(args):
         invoice, findings, match_result, vendor_resolution, action, determinism_hash,
     )
 
-    # --- Write outputs ---
+    # Write outputs
 
     write_json(out_dir / "posting_payload.json", posting_payload)
     (out_dir / "audit_log.md").write_text(audit_log_content, encoding="utf-8")
