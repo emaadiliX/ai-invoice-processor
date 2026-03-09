@@ -6,7 +6,7 @@ from pathlib import Path
 import yaml
 
 
-# ── shared I/O helpers (mirrors Agent C) ─────────────────────────────────────
+#shared I/O helpers (mirrors Agent C)
 
 def read_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
@@ -37,7 +37,7 @@ def get_manifest(bundle_dir: Path):
     return read_yaml(mp) if mp.exists() else {}
 
 
-# ── path resolvers (mirrors Agent C) ─────────────────────────────────────────
+#path resolvers (mirrors Agent C)
 
 def resolve_extraction(bundle_dir: Path, run_dir: Path | None, explicit: str | None):
     return find_first_existing([
@@ -69,7 +69,7 @@ def resolve_policy(bundle_dir: Path, manifest: dict, explicit: str | None):
     ])
 
 
-# ── finding builder (mirrors Agent C _build_finding) ─────────────────────────
+#finding builder (mirrors Agent C _build_finding)
 
 def make_finding(code: str, severity: str, message: str, evidence: dict, action: str = "manual_review"):
     return {
@@ -82,7 +82,7 @@ def make_finding(code: str, severity: str, message: str, evidence: dict, action:
     }
 
 
-# ── field aliasing (policy uses "invoice_number"; extraction uses "invoice_id") ─
+#field aliasing (policy uses "invoice_number"; extraction uses "invoice_id")
 
 FIELD_ALIASES = {
     "invoice_number": "invoice_id",
@@ -98,7 +98,7 @@ def get_field(doc: dict, key: str):
     return None
 
 
-# ── detection 1: duplicate invoice (historical) ──────────────────────────────
+#detection 1: duplicate invoice (historical)
 
 def collect_history(history_dir: Path | None, lookback_days: int,
                     exclude_dir: Path | None = None,
@@ -165,10 +165,11 @@ def check_duplicate(invoice: dict, history_dirs: list[Path | None], policy: dict
     return []
 
 
-# ── detection 2: bank account change ─────────────────────────────────────────
+#detection 2: bank account change
 
-def check_bank_change(invoice: dict, vendor_master: list, policy: dict) -> list[dict]:
-    vendor_id = invoice.get("vendor_id")
+def check_bank_change(invoice: dict, vendor_master: list, policy: dict,
+                      resolved_vendor_id: str | None = None) -> list[dict]:
+    vendor_id = invoice.get("vendor_id") or resolved_vendor_id
     if not vendor_id or not vendor_master:
         return []
 
@@ -208,7 +209,7 @@ def check_bank_change(invoice: dict, vendor_master: list, policy: dict) -> list[
     )]
 
 
-# ── detection 3: near approval limit ─────────────────────────────────────────
+#detection 3: near approval limit
 
 def check_near_limit(invoice: dict, policy: dict) -> list[dict]:
     thresholds = policy.get("thresholds") or {}
@@ -234,12 +235,13 @@ def check_near_limit(invoice: dict, policy: dict) -> list[dict]:
     return []
 
 
-# ── orchestrate all checks ────────────────────────────────────────────────────
+#orchestrate all checks
 
 def detect_anomalies(invoice: dict, vendor_master: list, policy: dict,
                      history_dirs: list[Path | None], run_dir: Path | None = None,
                      scenario_prefix: str | None = None,
-                     bundle_history_dirs: list[Path | None] | None = None) -> list[dict]:
+                     bundle_history_dirs: list[Path | None] | None = None,
+                     resolved_vendor_id: str | None = None) -> list[dict]:
     findings = []
 
     # 1. Duplicate check (compares invoice fields against historical records)
@@ -248,13 +250,14 @@ def detect_anomalies(invoice: dict, vendor_master: list, policy: dict,
                                     bundle_history_dirs=bundle_history_dirs))
 
     # 2. Bank & Limit Checks
-    findings.extend(check_bank_change(invoice, vendor_master, policy))
+    findings.extend(check_bank_change(invoice, vendor_master, policy,
+                                      resolved_vendor_id=resolved_vendor_id))
     findings.extend(check_near_limit(invoice, policy))
 
     return findings
 
 
-# ── output writers (mirrors Agent C) ─────────────────────────────────────────
+#output writers (mirrors Agent C)
 
 def update_context_packet(out_dir: Path, summary: dict):
     context_path = out_dir / "context_packet.json"
@@ -280,7 +283,7 @@ def append_findings(out_dir: Path, new_findings: list[dict]):
     write_json(findings_path, findings)
 
 
-# ── main entry ────────────────────────────────────────────────────────────────
+#main entry
 
 def run_agent_g(args):
     bundle_dir = Path(args.bundle_dir).resolve()
@@ -297,6 +300,17 @@ def run_agent_g(args):
         raise FileNotFoundError(
             "No extracted_invoice.json or mock_extraction.json found.")
     invoice = read_json(extraction_path)
+
+    # Use purchase order's vendor_id as fallback when invoice.vendor_id is null
+    resolved_vendor_id = None
+    if run_dir:
+        po_path = run_dir / "purchase_order.json"
+        if po_path.exists():
+            try:
+                po = read_json(po_path)
+                resolved_vendor_id = po.get("vendor_id")
+            except Exception:
+                pass
 
     policy_path = resolve_policy(bundle_dir, manifest, args.policy)
     policy = read_yaml(policy_path) if policy_path else {}
@@ -325,7 +339,8 @@ def run_agent_g(args):
 
     findings = detect_anomalies(invoice, vendor_master, policy, history_dirs,
                                 run_dir=run_dir, scenario_prefix=scenario_prefix,
-                                bundle_history_dirs=bundle_history_dirs)
+                                bundle_history_dirs=bundle_history_dirs,
+                                resolved_vendor_id=resolved_vendor_id)
 
     critical = [f for f in findings if f["severity"] == "CRITICAL"]
     high = [f for f in findings if f["severity"] == "HIGH"]
