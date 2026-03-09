@@ -1,0 +1,21 @@
+{
+  "grn_id": "TEST-GRN-0010",
+  "po_reference": "TEST-PO-0010",
+  "received_by": "WAREHOUSE_DEPT",
+  "receipt_date": "2024-07-15",
+  "line_items": [
+    {
+      "line_id": 1,
+      "description": "Cloud Hosting Services (Monthly)",
+      "quantity_received": 1,
+      "condition": "GOOD"
+    },
+    {
+      "line_id": 2,
+      "description": "Technical Support Package",
+      "quantity_received": 5,
+      "condition": "GOOD"
+    }
+  ],
+  "fully_received": true
+}

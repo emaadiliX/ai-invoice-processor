@@ -135,6 +135,10 @@ def finalize_decision(approval_packet, findings, match_result, policy, invoice):
         if has_currency_conversion:
             return ("ROUTE_APPROVAL", h_assigned_to,
                     ["Multi-currency invoice requires approval routing"])
+        vendor_issue_codes = {"VENDOR_MATCH_WEAK", "VENDOR_NOT_FOUND", "NEW_VENDOR"}
+        if finding_codes & vendor_issue_codes:
+            return ("ROUTE_TO_DEPT_HEAD", roles.get("dept_head", "dept_head"),
+                    ["Vendor resolution required — routing to department head"])
         if not invoice.get("po_reference"):
             if "MISSING_PO_REFERENCE" in finding_codes or "NO_PO_MATCH" in finding_codes:
                 return ("ROUTE_TO_DEPT_HEAD", roles.get("dept_head", "dept_head"),

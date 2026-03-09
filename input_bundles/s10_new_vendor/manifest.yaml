@@ -1,12 +1,11 @@
 scenario_id: "s10_new_vendor"
-description: "Invoice from NewTech Solutions LLC which has no match in vendor master. No PO reference on document. Total $2,675. Routes to manual review for vendor onboarding and PO resolution."
+description: "Invoice from NewTech Solutions LLC which has no match in vendor master. PO and GRN are present and match, but vendor is not in master data. Total $2,675. Routes to manual review for vendor onboarding."
 invoice_file: "invoice.png"
-purchase_order_file: null
-grn_file: null
+purchase_order_file: "purchase_order.json"
+grn_file: "grn.json"
 vendor_master_file: "../shared/vendor_master.json"
 tax_rules_file: "../shared/tax_rules.yaml"
 approval_policy_file: "../shared/approval_policy.yaml"
 expected_outcome: "ROUTE_TO_DEPT_HEAD"
 expected_exceptions:
   - "VENDOR_NOT_FOUND"
-  - "MISSING_PO_REFERENCE"
