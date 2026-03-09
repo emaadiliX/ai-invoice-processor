@@ -14,7 +14,8 @@ def read_json(path: Path):
 
 def write_json(path: Path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(payload, indent=2,
+                    ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 def read_yaml(path: Path):
@@ -51,7 +52,8 @@ def resolve_vendor_master(bundle_dir: Path, manifest: dict, explicit: str | None
     return find_first_existing([
         Path(explicit).resolve() if explicit else None,
         (bundle_dir / "vendor_master.json").resolve(),
-        (bundle_dir / manifest.get("vendor_master_file", "")).resolve() if manifest.get("vendor_master_file") else None,
+        (bundle_dir / manifest.get("vendor_master_file", "")
+         ).resolve() if manifest.get("vendor_master_file") else None,
         (bundle_dir.parent / "shared" / "vendor_master.json").resolve(),
         (bundle_dir.parent / "vendor_master.json").resolve(),
     ])
@@ -98,9 +100,10 @@ def get_field(doc: dict, key: str):
 
 # ── detection 1: duplicate invoice (historical) ──────────────────────────────
 
-def collect_history(history_dir: Path, lookback_days: int,
+def collect_history(history_dir: Path | None, lookback_days: int,
                     exclude_dir: Path | None = None,
-                    scenario_prefix: str | None = None) -> list[dict]:
+                    scenario_prefix: str | None = None,
+                    skip_date_filter: bool = False) -> list[dict]:
     """Recursively scan history_dir for extracted_invoice.json files within the lookback window."""
     if not history_dir or not history_dir.exists():
         return []
@@ -108,8 +111,7 @@ def collect_history(history_dir: Path, lookback_days: int,
     results = []
     for history_file in history_dir.rglob("extracted_invoice.json"):
         if exclude_dir and history_file.resolve().is_relative_to(exclude_dir.resolve()):
-            continue  # skip the current run's own file
-        # Skip previous runs of the same scenario (re-runs are not duplicates)
+            continue
         if scenario_prefix and history_file.parent.name.startswith(scenario_prefix + "_"):
             continue
         try:
@@ -117,8 +119,9 @@ def collect_history(history_dir: Path, lookback_days: int,
             inv_date_raw = doc.get("invoice_date")
             if inv_date_raw:
                 try:
-                    inv_date = datetime.strptime(inv_date_raw, "%Y-%m-%d").date()
-                    if inv_date < cutoff:
+                    inv_date = datetime.strptime(
+                        inv_date_raw, "%Y-%m-%d").date()
+                    if not skip_date_filter and inv_date < cutoff:
                         continue  # older than lookback window — skip
                 except ValueError:
                     pass  # unparseable date: include conservatively
@@ -142,10 +145,9 @@ def check_duplicate(invoice: dict, history_dirs: list[Path | None], policy: dict
     for hdir in history_dirs:
         history.extend(collect_history(hdir, lookback_days, exclude_dir=run_dir,
                                        scenario_prefix=scenario_prefix))
-    # Bundle-local history dirs (e.g. prior_invoice/) are inside run_dir,
-    # so we scan them without the exclude_dir filter.
     for hdir in (bundle_history_dirs or []):
-        history.extend(collect_history(hdir, lookback_days))
+        history.extend(collect_history(
+            hdir, lookback_days, skip_date_filter=True))
 
     for entry in history:
         prior = entry["doc"]
@@ -170,13 +172,15 @@ def check_bank_change(invoice: dict, vendor_master: list, policy: dict) -> list[
     if not vendor_id or not vendor_master:
         return []
 
-    vendor = next((v for v in vendor_master if v.get("vendor_id") == vendor_id), None)
+    vendor = next((v for v in vendor_master if v.get(
+        "vendor_id") == vendor_id), None)
     if not vendor or not vendor.get("bank_change_flag", False):
         return []
 
     total = invoice.get("total_amount") or 0.0
     risk = policy.get("risk") or {}
-    high_value_threshold = float(risk.get("bank_change_high_value_threshold", 5000))
+    high_value_threshold = float(
+        risk.get("bank_change_high_value_threshold", 5000))
 
     if total > high_value_threshold:
         return [make_finding(
@@ -281,19 +285,24 @@ def append_findings(out_dir: Path, new_findings: list[dict]):
 def run_agent_g(args):
     bundle_dir = Path(args.bundle_dir).resolve()
     run_dir = Path(args.run_dir).resolve() if args.run_dir else None
-    out_dir = Path(args.out_dir).resolve() if args.out_dir else (run_dir or bundle_dir)
-    history_dir = Path(args.history_dir).resolve() if args.history_dir else None
+    out_dir = Path(args.out_dir).resolve(
+    ) if args.out_dir else (run_dir or bundle_dir)
+    history_dir = Path(args.history_dir).resolve(
+    ) if args.history_dir else None
     manifest = get_manifest(bundle_dir)
 
-    extraction_path = resolve_extraction(bundle_dir, run_dir, args.extracted_invoice)
+    extraction_path = resolve_extraction(
+        bundle_dir, run_dir, args.extracted_invoice)
     if not extraction_path:
-        raise FileNotFoundError("No extracted_invoice.json or mock_extraction.json found.")
+        raise FileNotFoundError(
+            "No extracted_invoice.json or mock_extraction.json found.")
     invoice = read_json(extraction_path)
 
     policy_path = resolve_policy(bundle_dir, manifest, args.policy)
     policy = read_yaml(policy_path) if policy_path else {}
 
-    vendor_master_path = resolve_vendor_master(bundle_dir, manifest, args.vendor_master)
+    vendor_master_path = resolve_vendor_master(
+        bundle_dir, manifest, args.vendor_master)
     vendor_master = read_json(vendor_master_path) if vendor_master_path else []
 
     # Build list of directories to scan for duplicate history
@@ -335,7 +344,8 @@ def run_agent_g(args):
         "finding_codes": [f["code"] for f in findings],
     }
 
-    write_json(out_dir / "anomaly_detection_result.json", {"summary": summary, "findings": findings})
+    write_json(out_dir / "anomaly_detection_result.json",
+               {"summary": summary, "findings": findings})
     update_context_packet(out_dir, summary)
     append_findings(out_dir, findings)
 
@@ -349,7 +359,8 @@ def run_agent_g(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Agent G: Duplicate & anomaly detection")
+    parser = argparse.ArgumentParser(
+        description="Agent G: Duplicate & anomaly detection")
     parser.add_argument("--bundle-dir", required=True)
     parser.add_argument("--extracted-invoice", default=None)
     parser.add_argument("--run-dir", default=None)
