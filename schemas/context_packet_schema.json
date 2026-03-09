@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Context Packet",
+  "description": "The shared state object initialized by Agent A and updated by subsequent agents.",
+  "type": "object",
+  "required": ["run_id", "timestamp", "status", "files", "metadata_candidates", "system_paths"],
+  "properties": {
+    "run_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "status": { "type": "string" },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["filename", "type", "source", "path"],
+        "properties": {
+          "filename": { "type": "string" },
+          "type": { "type": "string" },
+          "source": { "type": "string" },
+          "path": { "type": "string" }
+        }
+      }
+    },
+    "metadata_candidates": {
+      "type": "object",
+      "required": ["vendor_ids", "po_refs"],
+      "properties": {
+        "vendor_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "po_refs": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "system_paths": {
+      "type": "object",
+      "required": ["input_bundle", "run_directory", "shared_config"],
+      "properties": {
+        "input_bundle": { "type": "string" },
+        "run_directory": { "type": "string" },
+        "shared_config": { "type": "string" }
+      }
+    }
+  },
+  "additionalProperties": true
+}

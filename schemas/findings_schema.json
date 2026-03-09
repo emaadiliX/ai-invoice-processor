@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Finding",
+  "description": "A discrete issue, risk, or anomaly detected by an agent.",
+  "type": "object",
+  "required": [
+    "agent",
+    "code",
+    "severity",
+    "message",
+    "evidence",
+    "recommended_action"
+  ],
+  "properties": {
+    "agent": {
+      "type": "string",
+      "description": "The identifier of the agent producing the finding (e.g., 'C', 'D').",
+      "pattern": "^[A-Z]$"
+    },
+    "code": {
+      "type": "string",
+      "description": "A unique, machine-readable error code (e.g., 'DUPLICATE_INVOICE').",
+      "pattern": "^[A-Z_]+$"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"],
+      "description": "The risk level of the finding."
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable description of the issue."
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Mandatory dictionary of key-value pairs supporting the finding.",
+      "minProperties": 1
+    },
+    "recommended_action": {
+      "type": "string",
+      "description": "The suggested next step for this specific issue."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Optional certainty score (0.0 to 1.0)."
+    },
+    "open_questions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Questions for human reviewers if the agent is uncertain."
+    },
+    "recommendations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Additional context or suggestions beyond the primary action."
+    }
+  },
+  "additionalProperties": false
+}

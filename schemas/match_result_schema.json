@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Match Result",
+  "description": "Output from Agent E comparing Invoice, PO, and GRN.",
+  "type": "object",
+  "required": [
+    "match_type",
+    "overall_status",
+    "po_id",
+    "invoice_id",
+    "line_results",
+    "findings_count",
+    "tolerances_applied"
+  ],
+  "properties": {
+    "match_type": {
+      "type": "string",
+      "enum": ["2WAY", "3WAY", "NO_PO_MATCH"]
+    },
+    "overall_status": {
+      "type": "string",
+      "enum": ["FULL_MATCH", "PARTIAL_MATCH", "MISMATCH", "NO_PO_MATCH"]
+    },
+    "po_id": { "type": ["string", "null"] },
+    "invoice_id": { "type": ["string", "null"] },
+    "currency_conversion": {
+      "type": ["object", "null"],
+      "properties": {
+        "invoice_currency": { "type": "string" },
+        "po_currency": { "type": "string" },
+        "converted_price": { "type": "number" }
+      }
+    },
+    "tolerances_applied": {
+      "type": "object",
+      "properties": {
+        "price_variance_pct": { "type": "number" },
+        "quantity_variance_pct": { "type": "number" }
+      }
+    },
+    "findings_count": { "type": "integer", "minimum": 0 },
+    "line_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["invoice_line_id", "line_status"],
+        "properties": {
+          "invoice_line_id": { "type": ["integer", "null"] },
+          "po_line_id": { "type": ["integer", "null"] },
+          "matched_by": { "type": "string" },
+          "line_status": { "type": "string", "enum": ["MATCH", "MISMATCH", "PARTIAL"] },
+          "qty_variance_pct": { "type": ["number", "null"] },
+          "price_variance_pct": { "type": ["number", "null"] }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
