@@ -53,7 +53,7 @@
       "swift": "PCBAUS00",
       "account_number": "400500600"
     },
-    "bank_change_flag": true
+    "bank_change_flag": false
   },
   {
     "vendor_id": "V-105",
@@ -66,6 +66,174 @@
       "iban": "DE44500105175407324931",
       "swift": "RHINDEFF",
       "account_number": "73049231"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-2207",
+    "name": "Redwood Office Interiors Ltd",
+    "address": "330 Timber Lane, Portland, US",
+    "tax_id": "US-22-0712345",
+    "payment_terms": "NET_30",
+    "bank_details": {
+      "bank_name": "Western Commerce Bank",
+      "iban": "US00WCBA00000000220701",
+      "swift": "WCBAUS00",
+      "account_number": "220701001"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-2208",
+    "name": "BluePeak Networking LLC",
+    "address": "88 Summit Drive, Denver, US",
+    "tax_id": "US-33-0881234",
+    "payment_terms": "NET_30",
+    "bank_details": {
+      "bank_name": "Mountain State Bank",
+      "iban": "US00MSBA00000000220801",
+      "swift": "MSBAUS00",
+      "account_number": "220801001"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-1042",
+    "name": "Fictional Vendor Co.",
+    "address": "100 Test Boulevard, Anytown, US",
+    "tax_id": "US-42-1042000",
+    "payment_terms": "NET_30",
+    "bank_details": {
+      "bank_name": "Test National Bank",
+      "iban": "US00TNBA00000000104200",
+      "swift": "TNBAUS00",
+      "account_number": "104200100"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-1043",
+    "name": "Test Supplies Ltd",
+    "address": "55 Commerce Way, Boston, US",
+    "tax_id": "US-43-1043000",
+    "payment_terms": "NET_30",
+    "bank_details": {
+      "bank_name": "Commerce First Bank",
+      "iban": "US00CFBA00000000104300",
+      "swift": "CFBAUS00",
+      "account_number": "104300100"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-1044",
+    "name": "TechParts Ltd",
+    "address": "200 Silicon Ave, San Jose, US",
+    "tax_id": "US-44-1044000",
+    "payment_terms": "NET_30",
+    "bank_details": {
+      "bank_name": "Valley Tech Bank",
+      "iban": "US00VTBA00000000104400",
+      "swift": "VTBAUS00",
+      "account_number": "104400100"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-1045",
+    "name": "Premier Manufacturing",
+    "address": "750 Industrial Park, Detroit, US",
+    "tax_id": "US-45-1045000",
+    "payment_terms": "NET_45",
+    "bank_details": {
+      "bank_name": "Midwest Industrial Bank",
+      "iban": "US00MIBA00000000104500",
+      "swift": "MIBAUS00",
+      "account_number": "104500100"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-1047",
+    "name": "Acme Supplies Ltd",
+    "address": "12 Warehouse Row, Chicago, US",
+    "tax_id": "US-47-1047000",
+    "payment_terms": "NET_30",
+    "bank_details": {
+      "bank_name": "Great Lakes Bank",
+      "iban": "US00GLBA00000000104700",
+      "swift": "GLBAUS00",
+      "account_number": "104700100"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-1046",
+    "name": "European Tech GmbH",
+    "address": "Techstrasse 12, 80333 Munich, DE",
+    "tax_id": "DE104600001",
+    "payment_terms": "NET_45",
+    "bank_details": {
+      "bank_name": "Bayerische Landesbank",
+      "iban": "DE00BYLA00000000104600",
+      "swift": "BYLADEFF",
+      "account_number": "104600100"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-1011",
+    "name": "Fictional Vendor Co.",
+    "address": "100 Test Boulevard, Anytown, US",
+    "tax_id": "US-42-1011000",
+    "payment_terms": "NET_30",
+    "bank_details": {
+      "bank_name": "Test National Bank",
+      "iban": "US00TNBA00000000101100",
+      "swift": "TNBAUS00",
+      "account_number": "101100100"
+    },
+    "bank_change_flag": true
+  },
+  {
+    "vendor_id": "V-1012",
+    "name": "Clearview Office Products Inc",
+    "address": "310 Commerce Blvd, Philadelphia, US",
+    "tax_id": "US-12-1012000",
+    "payment_terms": "NET_30",
+    "bank_details": {
+      "bank_name": "Liberty Trust Bank",
+      "iban": "US00LTBA00000000101200",
+      "swift": "LTBAUS00",
+      "account_number": "101200100"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-1014",
+    "name": "Northwind Test Supplies Ltd.",
+    "address": "400 Northern Blvd, Minneapolis, US",
+    "tax_id": "US-14-1014000",
+    "payment_terms": "NET_30",
+    "bank_details": {
+      "bank_name": "Northern Trust Bank",
+      "iban": "US00NTBA00000000101400",
+      "swift": "NTBAUS00",
+      "account_number": "101400100"
+    },
+    "bank_change_flag": false
+  },
+  {
+    "vendor_id": "V-1013",
+    "name": "Example Goods LLC",
+    "address": "900 Sample Street, Austin, US",
+    "tax_id": "US-13-1013000",
+    "payment_terms": "NET_30",
+    "bank_details": {
+      "bank_name": "Austin Commerce Bank",
+      "iban": "US00ACBA00000000101300",
+      "swift": "ACBAUS00",
+      "account_number": "101300100"
     },
     "bank_change_flag": false
   }
