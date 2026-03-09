@@ -40,6 +40,145 @@ def extract_text_from_pdf(pdf_path):
     return full_text
 
 
+BBOX_FIELDS = [
+    "invoice_id", "vendor_name", "total_amount",
+    "invoice_date", "due_date", "po_reference",
+]
+
+
+def _strip_currency(text):
+    return text.replace("$", "").replace(",", "").replace("€", "").replace("£", "").strip()
+
+
+def _word_to_bbox(w):
+    return {
+        "x0": round(w["x0"], 2),
+        "y0": round(w["top"], 2),
+        "x1": round(w["x1"], 2),
+        "y1": round(w["bottom"], 2),
+        "page": w["page"],
+    }
+
+
+def _find_word_bbox(words, search_text):
+    if not search_text:
+        return None
+
+    search_str = str(search_text).strip()
+    if not search_str:
+        return None
+
+    # exact single-word match
+    for w in words:
+        if w["text"].strip() == search_str:
+            return _word_to_bbox(w)
+
+    # currency-stripped match (e.g. "$10,000.00" vs "10000.0")
+    stripped_search = _strip_currency(search_str)
+    for w in words:
+        stripped_word = _strip_currency(w["text"])
+        if stripped_word and stripped_word == stripped_search:
+            return _word_to_bbox(w)
+
+    # numeric comparison (e.g. 12000.0 vs "$12,000.00")
+    try:
+        search_num = float(stripped_search)
+        for w in words:
+            try:
+                word_num = float(_strip_currency(w["text"]))
+                if abs(word_num - search_num) < 0.01:
+                    return _word_to_bbox(w)
+            except ValueError:
+                continue
+    except ValueError:
+        pass
+
+    # multi-word match for things like vendor names
+    search_lower = search_str.lower()
+    for i in range(len(words)):
+        combined = words[i]["text"]
+        if not search_lower.startswith(combined.lower()):
+            continue
+
+        bbox = {
+            "x0": words[i]["x0"],
+            "y0": words[i]["top"],
+            "x1": words[i]["x1"],
+            "y1": words[i]["bottom"],
+            "page": words[i]["page"],
+        }
+        j = i + 1
+        while j < len(words) and words[j]["page"] == words[i]["page"]:
+            combined += " " + words[j]["text"]
+            bbox["x1"] = words[j]["x1"]
+            bbox["y1"] = max(bbox["y1"], words[j]["bottom"])
+            if combined.lower() == search_lower:
+                return _word_to_bbox({"x0": bbox["x0"], "top": bbox["y0"],
+                                      "x1": bbox["x1"], "bottom": bbox["y1"],
+                                      "page": bbox["page"]})
+            if not search_lower.startswith(combined.lower()):
+                break
+            j += 1
+
+    return None
+
+
+def _date_variants(date_str):
+    """PDFs often show dates in display format, not YYYY-MM-DD."""
+    try:
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return [date_str]
+
+    return [
+        date_str,
+        dt.strftime("%d/%m/%Y"),
+        dt.strftime("%m/%d/%Y"),
+        dt.strftime("%d-%m-%Y"),
+        dt.strftime("%d %B %Y"),
+        dt.strftime("%B %d, %Y"),
+        dt.strftime("%d %b %Y"),
+    ]
+
+
+def extract_bounding_boxes_from_pdf(pdf_path, extracted_data):
+    all_words = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page_num, page in enumerate(pdf.pages, start=1):
+            words = page.extract_words()
+            for w in words:
+                w["page"] = page_num
+            all_words.extend(words)
+
+    bounding_boxes = {}
+    for field in BBOX_FIELDS:
+        value = extracted_data.get(field)
+        if value is None:
+            bounding_boxes[field] = {"source": "pdf", "bbox": None}
+            continue
+
+        # dates get reformatted during extraction, so try common display formats
+        if field in ("invoice_date", "due_date"):
+            bbox = None
+            for variant in _date_variants(str(value)):
+                bbox = _find_word_bbox(all_words, variant)
+                if bbox:
+                    break
+        else:
+            bbox = _find_word_bbox(all_words, value)
+
+        bounding_boxes[field] = {"source": "pdf", "bbox": bbox}
+
+    return bounding_boxes
+
+
+def _build_bbox_stubs(source, note=None):
+    entry = {"source": source, "bbox": None}
+    if note:
+        entry["note"] = note
+    return {field: dict(entry) for field in BBOX_FIELDS}
+
+
 EXTRACTION_SYSTEM_PROMPT = """You are an invoice data extraction assistant.
 You will receive raw text extracted from an invoice document.
 
@@ -230,6 +369,8 @@ def run_extraction(bundle_path, run_dir=None):
     if extracted is not None:
         print("Using mock extraction data (skipped OpenAI call).")
         extracted = flag_low_confidence_fields(extracted)
+        if "bounding_boxes" not in extracted:
+            extracted["bounding_boxes"] = _build_bbox_stubs("mock")
     else:
         file_type = get_file_type(invoice_path)
 
@@ -255,6 +396,16 @@ def run_extraction(bundle_path, run_dir=None):
 
         print("Received structured data from OpenAI.")
         extracted = flag_low_confidence_fields(extracted)
+
+        if file_type == "pdf":
+            print("Extracting bounding box coordinates from PDF...")
+            extracted["bounding_boxes"] = extract_bounding_boxes_from_pdf(
+                invoice_path, extracted
+            )
+        elif file_type == "image":
+            extracted["bounding_boxes"] = _build_bbox_stubs(
+                "vision_api", note="Vision API does not return coordinates"
+            )
 
     is_valid = validate_output(extracted)
     if not is_valid:
