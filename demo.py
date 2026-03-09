@@ -104,9 +104,6 @@ def print_row(scenario, expected, actual, status):
 def main():
 
     runs_path = Path("runs")
-    if runs_path.exists():
-        print("Cleaning up previous runs...")
-        shutil.rmtree(runs_path)
     runs_path.mkdir(exist_ok=True)
 
     print("\nIIPS Demo Results")

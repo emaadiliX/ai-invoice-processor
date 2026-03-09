@@ -7,6 +7,7 @@ grn_file: "grn.json"
 vendor_master_file: "../vendor_master.json"
 tax_rules_file: "../tax_rules.yaml"
 approval_policy_file: "../approval_policy.yaml"
+duplicate_history_dir: "prior_invoice"
 expected_outcome: "BLOCKED"
 expected_exceptions:
   - "DUPLICATE_INVOICE"

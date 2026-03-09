@@ -98,7 +98,9 @@ def get_field(doc: dict, key: str):
 
 # ── detection 1: duplicate invoice (historical) ──────────────────────────────
 
-def collect_history(history_dir: Path, lookback_days: int, exclude_dir: Path | None = None) -> list[dict]:
+def collect_history(history_dir: Path, lookback_days: int,
+                    exclude_dir: Path | None = None,
+                    scenario_prefix: str | None = None) -> list[dict]:
     """Recursively scan history_dir for extracted_invoice.json files within the lookback window."""
     if not history_dir or not history_dir.exists():
         return []
@@ -107,6 +109,9 @@ def collect_history(history_dir: Path, lookback_days: int, exclude_dir: Path | N
     for history_file in history_dir.rglob("extracted_invoice.json"):
         if exclude_dir and history_file.resolve().is_relative_to(exclude_dir.resolve()):
             continue  # skip the current run's own file
+        # Skip previous runs of the same scenario (re-runs are not duplicates)
+        if scenario_prefix and history_file.parent.name.startswith(scenario_prefix + "_"):
+            continue
         try:
             doc = read_json(history_file)
             inv_date_raw = doc.get("invoice_date")
@@ -123,14 +128,26 @@ def collect_history(history_dir: Path, lookback_days: int, exclude_dir: Path | N
     return results
 
 
-def check_duplicate(invoice: dict, history_dir: Path | None, policy: dict, run_dir: Path | None = None) -> list[dict]:
+def check_duplicate(invoice: dict, history_dirs: list[Path | None], policy: dict,
+                    run_dir: Path | None = None,
+                    scenario_prefix: str | None = None,
+                    bundle_history_dirs: list[Path | None] | None = None) -> list[dict]:
     dup_config = policy.get("duplicate") or {}
     lookback_days = int(dup_config.get("lookback_days", 90))
     match_keys = dup_config.get("match_keys") or [
         "vendor_id", "invoice_number", "invoice_date", "total_amount"
     ]
 
-    for entry in collect_history(history_dir, lookback_days, exclude_dir=run_dir):
+    history = []
+    for hdir in history_dirs:
+        history.extend(collect_history(hdir, lookback_days, exclude_dir=run_dir,
+                                       scenario_prefix=scenario_prefix))
+    # Bundle-local history dirs (e.g. prior_invoice/) are inside run_dir,
+    # so we scan them without the exclude_dir filter.
+    for hdir in (bundle_history_dirs or []):
+        history.extend(collect_history(hdir, lookback_days))
+
+    for entry in history:
         prior = entry["doc"]
         if all(get_field(invoice, k) == get_field(prior, k) for k in match_keys):
             return [make_finding(
@@ -143,34 +160,6 @@ def check_duplicate(invoice: dict, history_dir: Path | None, policy: dict, run_d
                 },
                 "block_payment",
             )]
-    return []
-
-
-# ── detection 1.5: duplicate invoice (test bundle check) ─────────────────────
-
-def check_test_bundle_duplicate(bundle_dir: Path) -> list[dict]:
-    """
-    Checks if 'invoice_duplicate.pdf' exists in the input bundle.
-    This logic specifically handles Scenario 6 (Duplicate Test) without
-    requiring historical run data, ensuring the test is deterministic.
-    """
-    if not bundle_dir or not bundle_dir.exists():
-        return []
-
-    # Look for the specific duplicate file used in s06
-    dup_file = bundle_dir / "invoice_duplicate.pdf"
-
-    if dup_file.exists():
-        return [make_finding(
-            "DUPLICATE_INVOICE", "CRITICAL",
-            "Duplicate invoice file detected in input bundle.",
-            {
-                "trigger": "file_presence_check",
-                "detected_file": str(dup_file.name),
-                "explanation": "Scenario test detected concurrent duplicate submission."
-            },
-            "block_payment",
-        )]
     return []
 
 
@@ -244,18 +233,17 @@ def check_near_limit(invoice: dict, policy: dict) -> list[dict]:
 # ── orchestrate all checks ────────────────────────────────────────────────────
 
 def detect_anomalies(invoice: dict, vendor_master: list, policy: dict,
-                     history_dir: Path | None, run_dir: Path | None = None,
-                     bundle_dir: Path | None = None) -> list[dict]:
+                     history_dirs: list[Path | None], run_dir: Path | None = None,
+                     scenario_prefix: str | None = None,
+                     bundle_history_dirs: list[Path | None] | None = None) -> list[dict]:
     findings = []
 
-    # 1. Historical Check
-    findings.extend(check_duplicate(invoice, history_dir, policy, run_dir=run_dir))
+    # 1. Duplicate check (compares invoice fields against historical records)
+    findings.extend(check_duplicate(invoice, history_dirs, policy,
+                                    run_dir=run_dir, scenario_prefix=scenario_prefix,
+                                    bundle_history_dirs=bundle_history_dirs))
 
-    # 2. Test Bundle Duplicate File Check (Scenario 6)
-    if bundle_dir:
-        findings.extend(check_test_bundle_duplicate(bundle_dir))
-
-    # 3. Bank & Limit Checks
+    # 2. Bank & Limit Checks
     findings.extend(check_bank_change(invoice, vendor_master, policy))
     findings.extend(check_near_limit(invoice, policy))
 
@@ -308,9 +296,27 @@ def run_agent_g(args):
     vendor_master_path = resolve_vendor_master(bundle_dir, manifest, args.vendor_master)
     vendor_master = read_json(vendor_master_path) if vendor_master_path else []
 
-    # Updated to pass bundle_dir
-    findings = detect_anomalies(invoice, vendor_master, policy, history_dir,
-                                run_dir=run_dir, bundle_dir=bundle_dir)
+    # Build list of directories to scan for duplicate history
+    history_dirs = [history_dir]
+    bundle_history_dirs = []
+    dup_hist = manifest.get("duplicate_history_dir")
+    if dup_hist:
+        bundle_history = bundle_dir / dup_hist
+        if bundle_history.exists():
+            bundle_history_dirs.append(bundle_history)
+
+    # Extract scenario prefix from run directory name to skip re-runs
+    scenario_prefix = None
+    if run_dir:
+        run_name = run_dir.name
+        # Run dirs follow pattern: {scenario_name}_{YYYYMMDD}_{HHMMSS}
+        parts = run_name.rsplit("_", 2)
+        if len(parts) >= 3:
+            scenario_prefix = parts[0]
+
+    findings = detect_anomalies(invoice, vendor_master, policy, history_dirs,
+                                run_dir=run_dir, scenario_prefix=scenario_prefix,
+                                bundle_history_dirs=bundle_history_dirs)
 
     critical = [f for f in findings if f["severity"] == "CRITICAL"]
     high = [f for f in findings if f["severity"] == "HIGH"]

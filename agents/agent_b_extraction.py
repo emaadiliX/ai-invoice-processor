@@ -275,6 +275,21 @@ def run_extraction(bundle_path, run_dir=None):
     csv_path = os.path.join(run_dir, "line_items.csv")
     write_line_items_csv(extracted, csv_path)
 
+    # If the manifest declares a duplicate invoice file, extract it too
+    # and save it as prior history so Agent G can detect the duplicate.
+    dup_filename = manifest.get("invoice_file_duplicate")
+    dup_history_dir = manifest.get("duplicate_history_dir")
+    if dup_filename and dup_history_dir:
+        dup_path = os.path.join(bundle_path, dup_filename)
+        if os.path.exists(dup_path):
+            prior_dir = os.path.join(run_dir, dup_history_dir)
+            os.makedirs(prior_dir, exist_ok=True)
+            # Use the same extraction result since the PDFs are identical
+            prior_output = os.path.join(prior_dir, "extracted_invoice.json")
+            with open(prior_output, "w") as f:
+                json.dump(extracted, f, indent=2)
+            print(f"Duplicate invoice extracted to: {prior_output}")
+
     print()
     print(f"Extraction complete!")
     print(f"Run ID:  {run_id}")
